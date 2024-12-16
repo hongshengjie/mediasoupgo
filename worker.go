@@ -1,7 +1,9 @@
 package meidsoupgo
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 )
 
 type WebRtcServer struct{}
@@ -44,4 +46,45 @@ type CoreWorker struct {
 
 	// Observer instance.
 	observer WorkerObserver
+}
+
+func NewCoreWorker(logLevel string, logTags []string, rtcMinPort, rtcMaxPort uint16, dtlsCertificateFile, dtlsPrivateKeyFile, libwebrtcFieldTrials string, disableLiburing bool) {
+	workerBin := os.Getenv("MEDIASOUP_WORKER_BIN")
+
+	cmd := exec.Command(workerBin)
+	if logLevel != "" {
+		cmd.Args = append(cmd.Args, "--logLevel="+logLevel)
+	}
+	for _, logTag := range logTags {
+		cmd.Args = append(cmd.Args, "--logTag="+logTag)
+	}
+	if rtcMinPort != 0 {
+		cmd.Args = append(cmd.Args, "--rtcMinPort="+fmt.Sprintf("%d", rtcMinPort))
+	}
+	if rtcMaxPort != 0 {
+		cmd.Args = append(cmd.Args, "--rtcMaxPort="+fmt.Sprintf("%d", rtcMaxPort))
+	}
+	if dtlsCertificateFile != "" && dtlsPrivateKeyFile != "" {
+		cmd.Args = append(cmd.Args, "--dtlsPrivateKeyFile="+dtlsPrivateKeyFile, "--dtlsCertificateFile="+dtlsCertificateFile)
+	}
+	if libwebrtcFieldTrials != "" {
+		cmd.Args = append(cmd.Args, "--libwebrtcFieldTrials="+libwebrtcFieldTrials)
+	}
+	if disableLiburing {
+		cmd.Args = append(cmd.Args, "disableLiburing=true")
+	}
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = nil
+	producerReader, producerWriter, err := os.Pipe()
+	if err != nil {
+		panic(err)
+	}
+	consumerReader, consumerWriter, err := os.Pipe()
+	if err != nil {
+		panic(err)
+	}
+	cmd.ExtraFiles = []*os.File{producerReader, consumerWriter}
+
+	cmd.Env = []string{"MEDIASOUP_VERSION=" + "3.15.2"}
 }

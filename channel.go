@@ -35,7 +35,7 @@ type Channel struct {
 	producerSocket *os.File
 	consumerSocket *os.File
 	r              *bufio.Reader
-	closed         bool
+	closed         atomic.Bool
 	nextId         atomic.Uint32
 	pid            uint32
 	sentsMutex     sync.RWMutex
@@ -48,12 +48,18 @@ func NewChannel(producerWriter, consumerReader *os.File, pid uint32) *Channel {
 		producerSocket: producerWriter,
 		consumerSocket: consumerReader,
 		r:              bufio.NewReader(consumerReader),
+
+		sents: make(map[uint32]*sent),
 	}
 	go c.readLoop()
 	return c
 }
 
 func (c *Channel) Close() {
+	if c.closed.CompareAndSwap(false, true) {
+		c.producerSocket.Close()
+		c.consumerSocket.Close()
+	}
 }
 
 func (c *Channel) Notify(event Notification.Event, body *Notification.BodyT, handleId string) error {
@@ -131,8 +137,12 @@ func (c *Channel) removesent(id uint32) {
 
 func (c *Channel) readLoop() error {
 	defer func() {
+		c.Close()
 	}()
 	for {
+		if c.closed.Load() {
+			return nil
+		}
 		l, err := c.r.Peek(4)
 		if err != nil {
 			return err
