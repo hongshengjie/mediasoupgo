@@ -4,8 +4,6 @@ import (
 	"os"
 )
 
-type Channel struct{}
-
 type WebRtcServer struct{}
 
 type Router struct{}
@@ -16,7 +14,7 @@ type (
 	WorkerAppData        struct{}
 )
 
-type Worker struct {
+type CoreWorker struct {
 	// mediasoup-worker child process.
 	child *os.Process
 
