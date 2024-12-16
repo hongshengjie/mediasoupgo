@@ -3,88 +3,173 @@ package meidsoupgo
 import (
 	"bufio"
 	"encoding/binary"
-	"fmt"
+	"errors"
 	"io"
-	"mediasoupgo/FBS/Message"
-	"mediasoupgo/FBS/Notification"
-	"mediasoupgo/FBS/Response"
-	"mediasoupgo/FBS/Worker"
 	"os"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	flatbuffers "github.com/google/flatbuffers/go"
+
+	"mediasoupgo/FBS/Log"
+	"mediasoupgo/FBS/Message"
+	"mediasoupgo/FBS/Notification"
+	"mediasoupgo/FBS/Request"
+	"mediasoupgo/FBS/Response"
 )
 
-type sentdata struct {
-	notify chan struct{}
-	reqId  uint32
-}
-type Channel struct {
-	producerWriter *os.File
-	consumerReader *os.File
-	r              *bufio.Reader
+const (
+	MESSAGE_MAX_LEN = 4194308
+	PAYLOAD_MAX_LEN = 4194304
+)
+
+type sent struct {
+	notify   chan struct{}
+	id       uint32
+	method   Request.Method
+	response *Response.ResponseT
 }
 
-func NewChannel(pw, cr *os.File) *Channel {
+type Channel struct {
+	producerSocket *os.File
+	consumerSocket *os.File
+	r              *bufio.Reader
+	closed         bool
+	nextId         atomic.Uint32
+	pid            uint32
+	sentsMutex     sync.RWMutex
+	sents          map[uint32]*sent
+}
+
+func NewChannel(producerWriter, consumerReader *os.File, pid uint32) *Channel {
 	c := &Channel{
-		producerWriter: pw,
-		consumerReader: cr,
-		r:              bufio.NewReader(cr),
+		pid:            pid,
+		producerSocket: producerWriter,
+		consumerSocket: consumerReader,
+		r:              bufio.NewReader(consumerReader),
 	}
+	go c.readLoop()
 	return c
 }
-func (c *Channel) Send(m *Message.MessageT) error {
+
+func (c *Channel) Close() {
+}
+
+func (c *Channel) Notify(event Notification.Event, body *Notification.BodyT, handleId string) error {
+	m := &Message.MessageT{
+		Data: &Message.BodyT{Type: Message.BodyNotification, Value: &Notification.NotificationT{
+			HandlerId: handleId,
+			Event:     event,
+			Body:      body,
+		}},
+	}
+
 	b := flatbuffers.NewBuilder(0)
 	b.FinishSizePrefixed(m.Pack(b))
-	_, err := c.producerWriter.Write(b.FinishedBytes())
-	return err
+	_, err := c.producerSocket.Write(b.FinishedBytes())
+	if err != nil {
+		return err
+	}
+	return nil
 }
-func (c *Channel) readLoop() error {
 
+func (c *Channel) Request(method Request.Method, body *Request.BodyT, handleId string) (*Response.ResponseT, error) {
+	if c.nextId.Load() < 4294967295 {
+	} else {
+		c.nextId.Store(1)
+	}
+
+	var id uint32
+	id = c.nextId.Add(1)
+	m := &Message.MessageT{
+		Data: &Message.BodyT{Type: Message.BodyRequest, Value: &Request.RequestT{
+			Id:        id,
+			HandlerId: handleId,
+			Method:    method,
+			Body:      body,
+		}},
+	}
+
+	b := flatbuffers.NewBuilder(0)
+	b.FinishSizePrefixed(m.Pack(b))
+
+	notify := make(chan struct{})
+	s := &sent{id: id, method: method, notify: notify}
+	c.addsent(s)
+	_, err := c.producerSocket.Write(b.FinishedBytes())
+	if err != nil {
+		return nil, err
+	}
+	select {
+	case <-notify:
+		c.removesent(id)
+		return s.response, nil
+	case <-time.After(time.Second):
+		return nil, errors.New("time out")
+	}
+}
+
+func (c *Channel) addsent(s *sent) {
+	c.sentsMutex.Lock()
+	c.sents[s.id] = s
+	c.sentsMutex.Unlock()
+}
+
+func (c *Channel) getsent(id uint32) *sent {
+	c.sentsMutex.RLock()
+	x := c.sents[id]
+	c.sentsMutex.RUnlock()
+	return x
+}
+
+func (c *Channel) removesent(id uint32) {
+	c.sentsMutex.Lock()
+	delete(c.sents, id)
+	c.sentsMutex.Unlock()
+}
+
+func (c *Channel) readLoop() error {
+	defer func() {
+	}()
 	for {
 		l, err := c.r.Peek(4)
 		if err != nil {
-			fmt.Println(err)
+			return err
 		}
-
 		length := binary.LittleEndian.Uint32(l)
-		fmt.Println("data length", length)
-
+		if length > PAYLOAD_MAX_LEN {
+			return errors.New("playload is too big")
+		}
 		data := make([]byte, length+4)
-		n, err := io.ReadFull(c.r, data)
+		_, err = io.ReadFull(c.r, data)
 		if err != nil {
-			fmt.Println(err, n)
+			return err
 		}
 		msg := Message.GetSizePrefixedRootAsMessage(data, 0)
 		msgT := msg.UnPack()
-		fmt.Println(msgT.Data, msg.DataType())
+
 		switch msgT.Data.Type {
 		case Message.BodyLog:
+			c.processLog(c.pid, msgT.Data.Value.(*Log.LogT))
 		case Message.BodyNotification:
+			c.processNotification(msgT.Data.Value.(*Notification.NotificationT))
 		case Message.BodyResponse:
+			c.processRespone(msgT.Data.Value.(*Response.ResponseT))
 		}
 	}
 }
 
-func processLog(msgT *Message.MessageT) {
-
-}
-func processNotification(msgT *Message.MessageT) {
-
-	notify, ok := msgT.Data.Value.(*Notification.NotificationT)
-	fmt.Println(notify, ok)
+func (c *Channel) processLog(pid uint32, msgT *Log.LogT) {
 }
 
-func processRespone(msgT *Message.MessageT) {
+func (c *Channel) processNotification(notification *Notification.NotificationT) {
+}
 
-	resp, ok := msgT.Data.Value.(*Response.ResponseT)
-	if ok {
-		switch resp.Body.Type {
-		case Response.BodyWorker_DumpResponse:
-			d, ok := resp.Body.Value.(*Worker.DumpResponseT)
-			fmt.Println(d, ok)
-		case Response.BodyWorker_ResourceUsageResponse:
-			d, ok := resp.Body.Value.(*Worker.ResourceUsageResponseT)
-			fmt.Println(d, ok)
-		}
+func (c *Channel) processRespone(response *Response.ResponseT) {
+	s := c.getsent(response.Id)
+	if s != nil {
+		s.response = response
+		close(s.notify)
 	}
 }
