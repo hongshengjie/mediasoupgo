@@ -1,12 +1,18 @@
-package meidsoupgo
+package mediasoupgo
 
 import (
 	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
+	"time"
 
-	"github.com/kataras/go-events"
+	"github.com/google/uuid"
+
+	"mediasoupgo/FBS/Request"
+	"mediasoupgo/FBS/Response"
+	Transportfsb "mediasoupgo/FBS/Transport"
+	"mediasoupgo/FBS/Worker"
 )
 
 type (
@@ -20,7 +26,8 @@ type CoreWorker struct {
 	child *os.Process
 
 	// Worker process PID.
-	pid int
+	pid  int
+	pids string
 
 	// Channel instance.
 	channel *Channel
@@ -84,33 +91,59 @@ func NewCoreWorker(logLevel string, logTags []string, rtcMinPort, rtcMaxPort uin
 		panic(err)
 	}
 	cmd.ExtraFiles = []*os.File{producerReader, consumerWriter}
-
+	channel, spawnDone := NewChannel(producerWriter, consumerReader)
 	cmd.Env = []string{"MEDIASOUP_VERSION=" + "3.15.2"}
-	cmd.Run()
+	if err := cmd.Start(); err != nil {
+		return nil
+	}
 	go func() {
 		cmd.Wait()
 	}()
+	select {
+	case <-spawnDone:
+		break
+	case <-time.After(time.Second * 10):
+		return nil
+	}
+	channel.SetPid(cmd.Process.Pid)
 	w := &CoreWorker{
 		child:            cmd.Process,
 		pid:              cmd.Process.Pid,
-		channel:          NewChannel(producerWriter, consumerReader, cmd.Process.Pid),
+		pids:             strconv.Itoa(cmd.Process.Pid),
+		channel:          channel,
 		closed:           false,
 		died:             false,
 		subprocessClosed: false,
 		appData:          WorkerAppData{},
 		webRtcServers:    map[*WebRtcServer]struct{}{},
 		routers:          map[*Router]struct{}{},
-		observer: func(*WorkerObserverEvents) {
-		},
+		observer:         func(*WorkerObserverEvents) {},
 	}
-	w.channel.Once(events.EventName(strconv.Itoa(w.pid)), func(i ...interface{}) {})
 	return w
 }
-func (w *CoreWorker) Close()              {}
-func (w *CoreWorker) Dump()               {}
-func (w *CoreWorker) GetResourceUsage()   {}
-func (w *CoreWorker) UpdateSettings()     {}
-func (w *CoreWorker) CreateRouter()       {}
-func (w *CoreWorker) CreateWebRtcServer() {}
-func (w *CoreWorker) WrokerDied()         {}
 
+func (w *CoreWorker) Close() {}
+
+func (w *CoreWorker) Dump() (*Response.ResponseT, error) {
+	return w.channel.Request(Request.MethodWORKER_DUMP, &Request.BodyT{Type: Request.BodyNONE}, w.pids)
+}
+
+func (w *CoreWorker) GetResourceUsage() (*Response.ResponseT, error) {
+	return w.channel.Request(Request.MethodWORKER_GET_RESOURCE_USAGE, &Request.BodyT{Type: Request.BodyNONE}, w.pids)
+}
+
+func (w *CoreWorker) UpdateSettings() {}
+
+func (w *CoreWorker) CreateRouter() {}
+
+func (w *CoreWorker) CreateWebRtcServer(listenInfos []*Transportfsb.ListenInfoT) (*WebRtcServer, error) {
+	id := uuid.NewString()
+	body := &Request.BodyT{Type: Request.BodyWorker_CreateWebRtcServerRequest, Value: &Worker.CreateWebRtcServerRequestT{WebRtcServerId: id, ListenInfos: listenInfos}}
+	_, err := w.channel.Request(Request.MethodWORKER_CREATE_WEBRTCSERVER, body, w.pids)
+	if err != nil {
+		return nil, err
+	}
+	return &WebRtcServer{WebRtcServerId: id}, nil
+}
+
+func (w *CoreWorker) WrokerDied() {}

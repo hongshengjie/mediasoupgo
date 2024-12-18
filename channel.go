@@ -1,10 +1,11 @@
-package meidsoupgo
+package mediasoupgo
 
 import (
 	"bufio"
 	"encoding/binary"
 	"errors"
 	"io"
+	"log/slog"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -52,6 +53,7 @@ type Channel struct {
 	producerSocket *os.File
 	consumerSocket *os.File
 	r              *bufio.Reader
+	spawnDone      chan struct{}
 	closed         atomic.Bool
 	nextId         atomic.Uint32
 	pid            int
@@ -60,18 +62,22 @@ type Channel struct {
 	events.EventEmmiter
 }
 
-func NewChannel(producerWriter, consumerReader *os.File, pid int) *Channel {
+func NewChannel(producerWriter, consumerReader *os.File) (*Channel, chan struct{}) {
+	spawnDone := make(chan struct{})
 	c := &Channel{
-		pid:            pid,
 		producerSocket: producerWriter,
 		consumerSocket: consumerReader,
 		r:              bufio.NewReader(consumerReader),
-
-		sents:        make(map[uint32]*sent),
-		EventEmmiter: events.New(),
+		spawnDone:      spawnDone,
+		sents:          make(map[uint32]*sent),
+		EventEmmiter:   events.New(),
 	}
 	go c.readLoop()
-	return c
+	return c, spawnDone
+}
+
+func (c *Channel) SetPid(pid int) {
+	c.pid = pid
 }
 
 func (c *Channel) Close() {
@@ -122,15 +128,17 @@ func (c *Channel) Request(method Request.Method, body *Request.BodyT, handleId s
 	notify := make(chan struct{})
 	s := &sent{id: id, method: method, notify: notify}
 	c.addsent(s)
-	_, err := c.producerSocket.Write(b.FinishedBytes())
+	data := b.FinishedBytes()
+	count, err := c.producerSocket.Write(data)
 	if err != nil {
 		return nil, err
 	}
+	slog.Info("writemsg", "writed", count, "origin data", len(data))
 	select {
 	case <-notify:
 		c.removesent(id)
 		return s.response, nil
-	case <-time.After(time.Second):
+	case <-time.After(time.Second * 10):
 		return nil, errors.New("time out")
 	}
 }
@@ -156,6 +164,7 @@ func (c *Channel) removesent(id uint32) {
 
 func (c *Channel) readLoop() error {
 	defer func() {
+		slog.Info("readLoop end")
 		c.Close()
 	}()
 	for {
@@ -164,6 +173,7 @@ func (c *Channel) readLoop() error {
 		}
 		l, err := c.r.Peek(4)
 		if err != nil {
+			slog.Error("peek error", "error", err)
 			return err
 		}
 		length := byteOrder.Uint32(l)
@@ -177,7 +187,7 @@ func (c *Channel) readLoop() error {
 		}
 		msg := Message.GetSizePrefixedRootAsMessage(data, 0)
 		msgT := msg.UnPack()
-
+		slog.Debug("read a mesasge", "data", msgT)
 		switch msgT.Data.Type {
 		case Message.BodyLog:
 			c.processLog(c.pid, msgT.Data.Value.(*Log.LogT))
@@ -193,6 +203,12 @@ func (c *Channel) processLog(pid int, msgT *Log.LogT) {
 }
 
 func (c *Channel) processNotification(notification *Notification.NotificationT) {
+	switch notification.Event {
+	case Notification.EventWORKER_RUNNING:
+		close(c.spawnDone)
+	default:
+
+	}
 }
 
 func (c *Channel) processRespone(response *Response.ResponseT) {
@@ -202,4 +218,3 @@ func (c *Channel) processRespone(response *Response.ResponseT) {
 		close(s.notify)
 	}
 }
-

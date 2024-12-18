@@ -3,16 +3,30 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"mediasoupgo/FBS/Message"
-	"mediasoupgo/FBS/Request"
+	"log/slog"
 	"os"
 	"os/exec"
 	"time"
 
 	flatbuffers "github.com/google/flatbuffers/go"
+
+	"mediasoupgo"
+	"mediasoupgo/FBS/Message"
+	"mediasoupgo/FBS/Request"
 )
 
 func main() {
+	coreWorker := mediasoupgo.NewCoreWorker("", nil, 0, 0, "", "", "", false)
+	if coreWorker != nil {
+		dumpresp, err := coreWorker.Dump()
+		slog.Info("dump", "resp", dumpresp, "err", err)
+		usage, err := coreWorker.GetResourceUsage()
+		slog.Info("GetResourceUsage", "resp", usage, "err", err)
+		time.Sleep(time.Hour)
+	}
+}
+
+func run() {
 	cmd := exec.Command("mediasoup-worker")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -37,7 +51,8 @@ func main() {
 				Method:    Request.MethodWORKER_DUMP,
 				HandlerId: "fsdfsdfsdf",
 				Body:      &Request.BodyT{Type: Request.BodyNONE},
-			}}}
+			}},
+		}
 		b.FinishSizePrefixed(m.Pack(b))
 		fmt.Println("write len of data:", len(b.FinishedBytes()))
 		producerWriter.Write(b.FinishedBytes())
@@ -49,7 +64,6 @@ func main() {
 			n, err := b.Read(bb)
 			fmt.Println("read", string(bb), "len", n, err)
 		}
-
 	}()
 	cmd.Start()
 	cmd.Wait()
