@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
+
+	"github.com/kataras/go-events"
 )
-
-type WebRtcServer struct{}
-
-type Router struct{}
 
 type (
 	WorkerObserverEvents struct{}
@@ -48,7 +47,7 @@ type CoreWorker struct {
 	observer WorkerObserver
 }
 
-func NewCoreWorker(logLevel string, logTags []string, rtcMinPort, rtcMaxPort uint16, dtlsCertificateFile, dtlsPrivateKeyFile, libwebrtcFieldTrials string, disableLiburing bool) {
+func NewCoreWorker(logLevel string, logTags []string, rtcMinPort, rtcMaxPort uint16, dtlsCertificateFile, dtlsPrivateKeyFile, libwebrtcFieldTrials string, disableLiburing bool) *CoreWorker {
 	workerBin := os.Getenv("MEDIASOUP_WORKER_BIN")
 
 	cmd := exec.Command(workerBin)
@@ -87,4 +86,31 @@ func NewCoreWorker(logLevel string, logTags []string, rtcMinPort, rtcMaxPort uin
 	cmd.ExtraFiles = []*os.File{producerReader, consumerWriter}
 
 	cmd.Env = []string{"MEDIASOUP_VERSION=" + "3.15.2"}
+	cmd.Run()
+	go func() {
+		cmd.Wait()
+	}()
+	w := &CoreWorker{
+		child:            cmd.Process,
+		pid:              cmd.Process.Pid,
+		channel:          NewChannel(producerWriter, consumerReader, cmd.Process.Pid),
+		closed:           false,
+		died:             false,
+		subprocessClosed: false,
+		appData:          WorkerAppData{},
+		webRtcServers:    map[*WebRtcServer]struct{}{},
+		routers:          map[*Router]struct{}{},
+		observer: func(*WorkerObserverEvents) {
+		},
+	}
+	w.channel.Once(events.EventName(strconv.Itoa(w.pid)), func(i ...interface{}) {})
+	return w
 }
+func (w *CoreWorker) Close()              {}
+func (w *CoreWorker) Dump()               {}
+func (w *CoreWorker) GetResourceUsage()   {}
+func (w *CoreWorker) UpdateSettings()     {}
+func (w *CoreWorker) CreateRouter()       {}
+func (w *CoreWorker) CreateWebRtcServer() {}
+func (w *CoreWorker) WrokerDied()         {}
+

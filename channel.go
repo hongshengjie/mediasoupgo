@@ -9,8 +9,10 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	flatbuffers "github.com/google/flatbuffers/go"
+	"github.com/kataras/go-events"
 
 	"mediasoupgo/FBS/Log"
 	"mediasoupgo/FBS/Message"
@@ -18,6 +20,21 @@ import (
 	"mediasoupgo/FBS/Request"
 	"mediasoupgo/FBS/Response"
 )
+
+const intWidth int = int(unsafe.Sizeof(0))
+
+var byteOrder binary.ByteOrder
+
+func ByteOrder() binary.ByteOrder { return byteOrder }
+
+func init() {
+	i := int(0x1)
+	if v := (*[intWidth]byte)(unsafe.Pointer(&i)); v[0] == 0 {
+		byteOrder = binary.BigEndian
+	} else {
+		byteOrder = binary.LittleEndian
+	}
+}
 
 const (
 	MESSAGE_MAX_LEN = 4194308
@@ -37,19 +54,21 @@ type Channel struct {
 	r              *bufio.Reader
 	closed         atomic.Bool
 	nextId         atomic.Uint32
-	pid            uint32
+	pid            int
 	sentsMutex     sync.RWMutex
 	sents          map[uint32]*sent
+	events.EventEmmiter
 }
 
-func NewChannel(producerWriter, consumerReader *os.File, pid uint32) *Channel {
+func NewChannel(producerWriter, consumerReader *os.File, pid int) *Channel {
 	c := &Channel{
 		pid:            pid,
 		producerSocket: producerWriter,
 		consumerSocket: consumerReader,
 		r:              bufio.NewReader(consumerReader),
 
-		sents: make(map[uint32]*sent),
+		sents:        make(map[uint32]*sent),
+		EventEmmiter: events.New(),
 	}
 	go c.readLoop()
 	return c
@@ -147,7 +166,7 @@ func (c *Channel) readLoop() error {
 		if err != nil {
 			return err
 		}
-		length := binary.LittleEndian.Uint32(l)
+		length := byteOrder.Uint32(l)
 		if length > PAYLOAD_MAX_LEN {
 			return errors.New("playload is too big")
 		}
@@ -170,7 +189,7 @@ func (c *Channel) readLoop() error {
 	}
 }
 
-func (c *Channel) processLog(pid uint32, msgT *Log.LogT) {
+func (c *Channel) processLog(pid int, msgT *Log.LogT) {
 }
 
 func (c *Channel) processNotification(notification *Notification.NotificationT) {
@@ -183,3 +202,4 @@ func (c *Channel) processRespone(response *Response.ResponseT) {
 		close(s.notify)
 	}
 }
+
