@@ -1,8 +1,18 @@
 package mediasoupgo
 
-type Router struct{}
+import (
+	"mediasoupgo/FBS/Request"
+	"mediasoupgo/FBS/Response"
+)
 
-func (r *Router) Dump() {}
+type Router struct {
+	routerId string
+	channel  *Channel
+}
+
+func (r *Router) Dump() (*Response.ResponseT, error) {
+	return r.channel.Request(Request.MethodROUTER_DUMP, &Request.BodyT{Type: Request.BodyNONE}, r.routerId)
+}
 
 func (r *Router) Close() {}
 

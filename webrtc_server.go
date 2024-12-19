@@ -1,7 +1,8 @@
 package mediasoupgo
 
 type WebRtcServer struct {
-	WebRtcServerId string
+	webRtcServerId string
+	channel        *Channel
 }
 
 func (s *WebRtcServer) Dump() {}
