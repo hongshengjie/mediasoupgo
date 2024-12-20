@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -41,13 +42,6 @@ const (
 	MESSAGE_MAX_LEN = 4194308
 	PAYLOAD_MAX_LEN = 4194304
 )
-
-type sent struct {
-	notify   chan struct{}
-	id       uint32
-	method   Request.Method
-	response *Response.ResponseT
-}
 
 type Channel struct {
 	producerSocket *os.File
@@ -143,25 +137,6 @@ func (c *Channel) Request(method Request.Method, body *Request.BodyT, handleId s
 	}
 }
 
-func (c *Channel) addsent(s *sent) {
-	c.sentsMutex.Lock()
-	c.sents[s.id] = s
-	c.sentsMutex.Unlock()
-}
-
-func (c *Channel) getsent(id uint32) *sent {
-	c.sentsMutex.RLock()
-	x := c.sents[id]
-	c.sentsMutex.RUnlock()
-	return x
-}
-
-func (c *Channel) removesent(id uint32) {
-	c.sentsMutex.Lock()
-	delete(c.sents, id)
-	c.sentsMutex.Unlock()
-}
-
 func (c *Channel) readLoop() error {
 	defer func() {
 		slog.Info("readLoop end")
@@ -199,7 +174,12 @@ func (c *Channel) readLoop() error {
 	}
 }
 
-func (c *Channel) processLog(pid int, msgT *Log.LogT) {
+func (c *Channel) processRespone(response *Response.ResponseT) {
+	s := c.getsent(response.Id)
+	if s != nil {
+		s.response = response
+		close(s.notify)
+	}
 }
 
 func (c *Channel) processNotification(notification *Notification.NotificationT) {
@@ -207,14 +187,47 @@ func (c *Channel) processNotification(notification *Notification.NotificationT) 
 	case Notification.EventWORKER_RUNNING:
 		close(c.spawnDone)
 	default:
+		c.EventEmmiter.Emit(events.EventName(notification.HandlerId), notification.Event, notification)
 
 	}
 }
 
-func (c *Channel) processRespone(response *Response.ResponseT) {
-	s := c.getsent(response.Id)
-	if s != nil {
-		s.response = response
-		close(s.notify)
+func (c *Channel) processLog(pid int, msgT *Log.LogT) {
+	switch msgT.Data[0] {
+	case 'D':
+		slog.Debug(fmt.Sprintf("[pid:%d]", pid), "", msgT.Data)
+	case 'W':
+		slog.Warn(fmt.Sprintf("[pid:%d]", pid), "", msgT.Data)
+	case 'E':
+		slog.Error(fmt.Sprintf("[pid:%d]", pid), "", msgT.Data)
+	case 'X':
+		slog.Info(fmt.Sprintf("[pid:%d]", pid), "", msgT.Data)
+
 	}
+}
+
+type sent struct {
+	notify   chan struct{}
+	id       uint32
+	method   Request.Method
+	response *Response.ResponseT
+}
+
+func (c *Channel) addsent(s *sent) {
+	c.sentsMutex.Lock()
+	c.sents[s.id] = s
+	c.sentsMutex.Unlock()
+}
+
+func (c *Channel) getsent(id uint32) *sent {
+	c.sentsMutex.RLock()
+	x := c.sents[id]
+	c.sentsMutex.RUnlock()
+	return x
+}
+
+func (c *Channel) removesent(id uint32) {
+	c.sentsMutex.Lock()
+	delete(c.sents, id)
+	c.sentsMutex.Unlock()
 }

@@ -11,7 +11,6 @@ import (
 
 	"mediasoupgo/FBS/Request"
 	"mediasoupgo/FBS/Response"
-	"mediasoupgo/FBS/RtpParameters"
 	Transportfsb "mediasoupgo/FBS/Transport"
 	"mediasoupgo/FBS/Worker"
 )
@@ -135,7 +134,7 @@ func (w *CoreWorker) GetResourceUsage() (*Response.ResponseT, error) {
 
 func (w *CoreWorker) UpdateSettings() {}
 
-func (w *CoreWorker) CreateRouter(mediaCodes []*RtpParameters.RtpCodecParametersT) (*Router, error) {
+func (w *CoreWorker) CreateRouter(mediaCodes []*RtpCodecParameters) (*Router, error) {
 	routerId := uuid.NewString()
 	body := &Request.BodyT{Type: Request.BodyWorker_CreateRouterRequest, Value: &Worker.CreateRouterRequestT{RouterId: routerId}}
 	_, err := w.channel.Request(Request.MethodWORKER_CREATE_ROUTER, body, w.pids)
