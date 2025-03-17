@@ -75,18 +75,18 @@ type RtpEncodingParameters struct {
 type RtpHeaderExtensionUri string
 
 const (
-	ExtensionUriMid                    = "urn:ietf:params:rtp-hdrext:sdes:mid"
-	ExtensionUriRtpStreamId            = "urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id"
-	ExtensionUriRepairedRtpStreamId    = "urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id"
-	ExtensionUriFrameMarkingDraft07    = "http://tools.ietf.org/html/draft-ietf-avtext-framemarking-07"
-	ExtensionUriFrameMarking           = "urn:ietf:params:rtp-hdrext:framemarking"
-	ExtensionUriAudioLevel             = "urn:ietf:params:rtp-hdrext:ssrc-audio-level"
-	ExtensionUriVedioORientation       = "urn:3gpp:video-orientation"
-	ExtensionUriTimeOffset             = "urn:ietf:params:rtp-hdrext:toffset"
-	ExtensionUriTransportWideCcDraft01 = "http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01"
-	ExtensionUriAbsSendTime            = "http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time"
-	ExtensionUriAbsCaptureTime         = "http://www.webrtc.org/experiments/rtp-hdrext/abs-capture-time"
-	ExtensionUriPlayoutDelay           = "http://www.webrtc.org/experiments/rtp-hdrext/playout-delay"
+	ExtensionUriMid                    RtpHeaderExtensionUri = "urn:ietf:params:rtp-hdrext:sdes:mid"
+	ExtensionUriRtpStreamId            RtpHeaderExtensionUri = "urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id"
+	ExtensionUriRepairedRtpStreamId    RtpHeaderExtensionUri = "urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id"
+	ExtensionUriFrameMarkingDraft07    RtpHeaderExtensionUri = "http://tools.ietf.org/html/draft-ietf-avtext-framemarking-07"
+	ExtensionUriFrameMarking           RtpHeaderExtensionUri = "urn:ietf:params:rtp-hdrext:framemarking"
+	ExtensionUriAudioLevel             RtpHeaderExtensionUri = "urn:ietf:params:rtp-hdrext:ssrc-audio-level"
+	ExtensionUriVedioORientation       RtpHeaderExtensionUri = "urn:3gpp:video-orientation"
+	ExtensionUriTimeOffset             RtpHeaderExtensionUri = "urn:ietf:params:rtp-hdrext:toffset"
+	ExtensionUriTransportWideCcDraft01 RtpHeaderExtensionUri = "http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01"
+	ExtensionUriAbsSendTime            RtpHeaderExtensionUri = "http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time"
+	ExtensionUriAbsCaptureTime         RtpHeaderExtensionUri = "http://www.webrtc.org/experiments/rtp-hdrext/abs-capture-time"
+	ExtensionUriPlayoutDelay           RtpHeaderExtensionUri = "http://www.webrtc.org/experiments/rtp-hdrext/playout-delay"
 )
 
 type RtpHeaderExtensionParameters struct {
