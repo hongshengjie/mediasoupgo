@@ -16,9 +16,8 @@ import (
 )
 
 type (
-	WorkerObserverEvents struct{}
-	WorkerObserver       func(*WorkerObserverEvents)
-	WorkerAppData        struct{}
+	WorkerObserver func(*WorkerObserverEvents)
+	WorkerAppData  struct{}
 )
 
 type CoreWorker struct {
