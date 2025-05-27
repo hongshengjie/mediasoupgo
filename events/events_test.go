@@ -42,7 +42,6 @@ func leaveFromRoom(user string, room string) {
 var e = New[[]any]()
 
 func ExampleEvents() {
-
 	// regiter our events to the default event emmiter
 	for evt, listeners := range testEvents {
 		e.On(evt, listeners...)
@@ -67,7 +66,6 @@ func TestEvents(t *testing.T) {
 	expectedPayload := "this is my payload"
 
 	e.On("my_event", func(payload []any) {
-
 		if s, ok := payload[0].(string); !ok {
 			t.Fatalf("Payload is not the correct type, got: %#v", payload)
 		} else if s != expectedPayload {
@@ -98,7 +96,7 @@ func TestEventsOnce(t *testing.T) {
 	// on default
 	Clear()
 
-	var count = 0
+	count := 0
 	Once("my_event", func(payload any) {
 		if count > 0 {
 			t.Fatalf("Once's listener fired more than one time! count: %d", count)
@@ -130,14 +128,13 @@ func TestEventsOnce(t *testing.T) {
 	if l := len(Listeners("my_event")); l > 0 {
 		t.Fatalf("Real event's listeners length count ( from Listeners) should be: %d but has: %d", 0, l)
 	}
-
 }
 
 func TestRemoveListener(t *testing.T) {
 	// on default
 	e := New[[]any]()
 
-	var count = 0
+	count := 0
 	listener := func(payload []any) {
 		if count > 1 {
 			t.Fatal("Event listener should be removed")
@@ -174,9 +171,11 @@ func TestRemoveListener(t *testing.T) {
 type W1 struct {
 	Foo string
 }
+
 type W2 struct {
 	Bar int
 }
+
 type W3 struct {
 	XXX any
 }

@@ -76,10 +76,32 @@ func ToFbsRtpParameters(a *RtpParameters) *fbsRtpParameters.RtpParametersT {
 	}
 	return ret
 }
+
 func ToFBSRtpEncodingParameters(p []*RtpEncodingParameters) []*fbsRtpParameters.RtpEncodingParametersT {
-	//TODO
-	return nil
+	var ret []*fbsRtpParameters.RtpEncodingParametersT
+	for _, v := range p {
+		item := &fbsRtpParameters.RtpEncodingParametersT{
+			Ssrc:             v.SSRC,
+			CodecPayloadType: v.CodecPayloadType,
+			MaxBitrate:       v.MaxBitrate,
+		}
+		if v.RID != nil {
+			item.Rid = *v.RID
+		}
+		if v.RTX != nil {
+			item.Rtx = &fbsRtpParameters.RtxT{Ssrc: v.RTX.SSRC}
+		}
+		if v.DTX != nil {
+			item.Dtx = *v.DTX
+		}
+		if v.ScalabilityMode != nil {
+			item.ScalabilityMode = *v.ScalabilityMode
+		}
+		ret = append(ret, item)
+	}
+	return ret
 }
+
 func ToFBSParameters(p map[string]any) []*fbsRtpParameters.ParameterT {
 	var ret []*fbsRtpParameters.ParameterT
 	for k, v := range p {

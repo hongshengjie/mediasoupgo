@@ -436,34 +436,30 @@ func CanConsume(consumableParams *RtpParameters, caps *RtpCapabilities) (bool, e
 
 // GetConsumerRtpParameters generates RTP parameters for a specific Consumer
 func GetConsumerRtpParameters(
-	ConsumableRtpParameters RtpParameters
-	RemoteRtpCapabilities   RtpCapabilities
-	Pipe                    bool
-	EnableRtx               bool
-
-) (RtpParameters, error) {
+	consumableRtpParameters RtpParameters,
+	remoteRtpCapabilities RtpCapabilities,
+	pipe bool,
+	enableRtx bool,
+) (*RtpParameters, error) {
 	consumerParams := RtpParameters{
-		Codecs:           []*RtpCodecParameters{},
-		HeaderExtensions: []*RtpHeaderExtensionParameters{},
-		Encodings:        []*RtpEncodingParameters{},
-		RTCP:             args.ConsumableRtpParameters.RTCP,
+		RTCP: consumableRtpParameters.RTCP,
 	}
 
-	for _, capCodec := range args.RemoteRtpCapabilities.Codecs {
+	for _, capCodec := range remoteRtpCapabilities.Codecs {
 		if err := ValidateRtpCodecCapability(capCodec); err != nil {
-			return RtpParameters{}, err
+			return nil, err
 		}
 	}
 
-	consumableCodecs := cloneCodecs(args.ConsumableRtpParameters.Codecs)
+	consumableCodecs := cloneCodecs(consumableRtpParameters.Codecs)
 	rtxSupported := false
 
 	for _, codec := range consumableCodecs {
-		if !args.EnableRtx && IsRtxCodec(codec) {
+		if !enableRtx && IsRtxCodec(codec) {
 			continue
 		}
 		var matchedCapCodec *RtpCodecCapability
-		for _, capcodec := range args.RemoteRtpCapabilities.Codecs {
+		for _, capcodec := range remoteRtpCapabilities.Codecs {
 			if MatchCodecs(capcodec, codec, true, true) {
 				matchedCapCodec = capcodec
 			}
@@ -471,7 +467,7 @@ func GetConsumerRtpParameters(
 		if matchedCapCodec == nil {
 			continue
 		}
-		codec.RTCPFeedback = filterRtcpFeedback(matchedCapCodec.RTCPFeedback, args.EnableRtx)
+		codec.RTCPFeedback = filterRtcpFeedback(matchedCapCodec.RTCPFeedback, enableRtx)
 		consumerParams.Codecs = append(consumerParams.Codecs, codec)
 	}
 
@@ -489,12 +485,12 @@ func GetConsumerRtpParameters(
 	}
 
 	if len(consumerParams.Codecs) == 0 || IsRtxCodec(consumerParams.Codecs[0]) {
-		return RtpParameters{}, errors.New("no compatible media codecs")
+		return nil, errors.New("no compatible media codecs")
 	}
 
 	consumerParams.HeaderExtensions = filterHeaderExtensions(
-		args.ConsumableRtpParameters.HeaderExtensions,
-		args.RemoteRtpCapabilities.HeaderExtensions,
+		consumableRtpParameters.HeaderExtensions,
+		remoteRtpCapabilities.HeaderExtensions,
 	)
 
 	if hasTransportCC(consumerParams.HeaderExtensions) {
@@ -514,7 +510,7 @@ func GetConsumerRtpParameters(
 		}
 	}
 
-	if !args.Pipe {
+	if !pipe {
 		consumerEncoding := RtpEncodingParameters{}
 		consumerEncoding.SSRC = ptr.To(generateRandomNumber())
 		if rtxSupported {
@@ -523,18 +519,18 @@ func GetConsumerRtpParameters(
 		}
 
 		encodingWithScalabilityMode := findEncodingWithScalabilityMode(
-			args.ConsumableRtpParameters.Encodings,
+			consumableRtpParameters.Encodings,
 		)
 		scalabilityMode := ""
 		if encodingWithScalabilityMode != nil {
 			scalabilityMode = *encodingWithScalabilityMode.ScalabilityMode
 		}
 
-		if len(args.ConsumableRtpParameters.Encodings) > 1 {
+		if len(consumableRtpParameters.Encodings) > 1 {
 			temporalLayers := parseScalabilityMode(scalabilityMode).TemporalLayers
 			scalabilityMode = fmt.Sprintf(
 				"L%dT%d",
-				len(args.ConsumableRtpParameters.Encodings),
+				len(consumableRtpParameters.Encodings),
 				temporalLayers,
 			)
 		}
@@ -543,20 +539,20 @@ func GetConsumerRtpParameters(
 			consumerEncoding.ScalabilityMode = &scalabilityMode
 		}
 
-		maxBitrate := maxEncodingMaxBitrate(args.ConsumableRtpParameters.Encodings)
+		maxBitrate := maxEncodingMaxBitrate(consumableRtpParameters.Encodings)
 		if maxBitrate > 0 {
 			consumerEncoding.MaxBitrate = &maxBitrate
 		}
 
 		consumerParams.Encodings = append(consumerParams.Encodings, &consumerEncoding)
 	} else {
-		consumableEncodings := cloneEncodings(args.ConsumableRtpParameters.Encodings)
+		consumableEncodings := cloneEncodings(consumableRtpParameters.Encodings)
 		baseSsrc := generateRandomNumber()
 		baseRtxSsrc := generateRandomNumber()
 		for i := range consumableEncodings {
 			consumableEncodings[i].SSRC = nil
 			consumableEncodings[i].SSRC = ptr.To(baseSsrc + uint32(i))
-			if args.EnableRtx {
+			if enableRtx {
 				rtxSsrc := baseRtxSsrc + uint32(i)
 				consumableEncodings[i].RTX = &RTX{SSRC: rtxSsrc}
 			} else {
@@ -566,7 +562,7 @@ func GetConsumerRtpParameters(
 		}
 	}
 
-	return consumerParams, nil
+	return &consumerParams, nil
 }
 
 // GetPipeConsumerRtpParameters generates RTP parameters for a pipe Consumer

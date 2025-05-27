@@ -2,6 +2,7 @@
 package events
 
 import (
+	"fmt"
 	"log"
 	"log/slog"
 	"reflect"
@@ -15,9 +16,11 @@ const (
 	EnableWarning       = false
 )
 
-type EventName string
-type Listener[T any] func(arg T)
-type Events[T any] map[EventName][]Listener[T]
+type (
+	EventName       string
+	Listener[T any] func(arg T)
+	Events[T any]   map[EventName][]Listener[T]
+)
 
 type EventEmmiter[T any] interface {
 	AddListener(EventName, ...Listener[T])
@@ -41,16 +44,13 @@ func (e Events[T]) CopyTo(emmiter EventEmmiter[T]) {
 			emmiter.AddListener(evt, listeners...)
 		}
 	}
-
 }
 
 func New[T any]() EventEmmiter[T] {
 	return &emmiter[T]{maxListeners: DefaultMaxListeners, evtListeners: Events[T]{}}
 }
 
-var (
-	_ EventEmmiter[any] = &emmiter[any]{}
-)
+var _ EventEmmiter[any] = &emmiter[any]{}
 
 type emmiter[T any] struct {
 	maxListeners int
@@ -100,8 +100,8 @@ func (e *emmiter[T]) Emit(evt EventName, data T) {
 	e.mu.RUnlock()
 	// prevent deadlock caused by two level lock
 	if len(list) > 0 {
-		for i := range list {
-			l := listeners[i]
+		fmt.Println(len(list))
+		for _, l := range list {
 			if l != nil {
 				l(data)
 			}
@@ -129,6 +129,7 @@ func (e *emmiter[T]) EventNames() []EventName {
 func (e *emmiter[T]) GetMaxListeners() int {
 	return e.maxListeners
 }
+
 func (e *emmiter[T]) ListenerCount(evt EventName) (count int) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()

@@ -43,9 +43,15 @@ func NewWebRtcTransport(
 	getProducerById func(string) Producer,
 	getDataProducerById func(string) DataProducer,
 ) WebRtcTransport {
-
 	observer := events.New[WebRtcTransportObserverEvents]()
 	eventEmmiter := events.New[WebRtcTransportEvents]()
+
+	fn1 := func(en events.EventName, te TransportEvents) {
+		eventEmmiter.Emit(en, WebRtcTransportEvents{TransportEvents: te})
+	}
+	fn2 := func(en events.EventName, toe TransportObserverEvents) {
+		observer.Emit(en, WebRtcTransportObserverEvents{TransportObserverEvents: toe})
+	}
 	wi := &webRtcTransportImpl{
 		data:         options,
 		observer:     observer,
@@ -58,12 +64,9 @@ func NewWebRtcTransport(
 		getRouterRtpCapabilities,
 		getProducerById,
 		getDataProducerById,
-		func(en events.EventName, te TransportEvents) {
-			eventEmmiter.Emit(en, WebRtcTransportEvents{TransportEvents: te})
-		},
-		func(en events.EventName, toe TransportObserverEvents) {
-			observer.Emit(en, WebRtcTransportObserverEvents{TransportObserverEvents: toe})
-		}, "webrtc")
+		fn1,
+		fn2,
+		"webrtc")
 	wi.transportImpl = ti
 	wi.handleWorkerNotifications()
 	wi.handleListenerError()

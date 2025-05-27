@@ -344,9 +344,9 @@ func (t *transportImpl) Consume(options *ConsumerOptions) (Consumer, error) {
 	if options.ProducerID == "" {
 		return nil, errors.New("empty produceId")
 	}
-	if options.MID == nil || *options.MID == "" {
-		return nil, errors.New("empty mid")
-	}
+	// if options.MID == nil || *options.MID == "" {
+	// 	return nil, errors.New("empty mid")
+	// }
 	clonedRtpCapabilities := options.RTPCapabilities
 	err := ValidateRtpCapabilities(&clonedRtpCapabilities)
 	if err != nil {
@@ -380,6 +380,9 @@ func (t *transportImpl) Consume(options *ConsumerOptions) (Consumer, error) {
 		pipe,
 		enableRtx,
 	)
+	if err != nil {
+		return nil, err
+	}
 	if !pipe {
 		if options.MID != nil {
 			rtpParameters.MID = options.MID
@@ -393,8 +396,10 @@ func (t *transportImpl) Consume(options *ConsumerOptions) (Consumer, error) {
 	}
 	var layer *consumer.ConsumerLayersT
 	if options.PreferredLayers != nil {
-		layer = &consumer.ConsumerLayersT{SpatialLayer: options.PreferredLayers.SpatialLayer,
-			TemporalLayer: options.PreferredLayers.TemporalLayer}
+		layer = &consumer.ConsumerLayersT{
+			SpatialLayer:  options.PreferredLayers.SpatialLayer,
+			TemporalLayer: options.PreferredLayers.TemporalLayer,
+		}
 	}
 	var typ rtpparameters.Type
 	var ctyp ConsumerType
@@ -419,7 +424,7 @@ func (t *transportImpl) Consume(options *ConsumerOptions) (Consumer, error) {
 		ConsumerId:             consumerId,
 		ProducerId:             options.ProducerID,
 		Kind:                   rtpparameters.EnumValuesMediaKind[strings.ToUpper(string(producer.Kind()))],
-		RtpParameters:          ToFbsRtpParameters(&rtpParameters),
+		RtpParameters:          ToFbsRtpParameters(rtpParameters),
 		Type:                   typ,
 		ConsumableRtpEncodings: ToFBSRtpEncodingParameters(producer.ConsumableRTPParameters().Encodings),
 		Paused:                 paused,
@@ -434,6 +439,7 @@ func (t *transportImpl) Consume(options *ConsumerOptions) (Consumer, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	resp2 := resp.Body.Value.(*transport.ConsumeResponseT)
 	var cscore *ConsumerScore
 	var clayers *ConsumerLayers
@@ -445,7 +451,6 @@ func (t *transportImpl) Consume(options *ConsumerOptions) (Consumer, error) {
 		}
 	}
 	if resp2.PreferredLayers != nil {
-
 		clayers = &ConsumerLayers{
 			SpatialLayer:  resp2.PreferredLayers.SpatialLayer,
 			TemporalLayer: resp2.PreferredLayers.TemporalLayer,
@@ -456,7 +461,7 @@ func (t *transportImpl) Consume(options *ConsumerOptions) (Consumer, error) {
 		&ConsumerData{
 			producerId:    options.ProducerID,
 			kind:          producer.Kind(),
-			rtpParameters: rtpParameters,
+			rtpParameters: *rtpParameters,
 			typ:           ctyp,
 		},
 		t.channel,

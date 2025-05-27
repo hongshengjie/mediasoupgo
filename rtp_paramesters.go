@@ -94,13 +94,13 @@ const (
 )
 
 type RtpHeaderExtensionParameters struct {
-	URI        RtpHeaderExtensionUri
-	ID         byte
-	Encrypt    *bool
-	Parameters map[string]any
+	URI        RtpHeaderExtensionUri `json:"uri"`
+	ID         byte                  `json:"id"`
+	Encrypt    *bool                 `json:"encrypt"`
+	Parameters map[string]any        `json:"parameters"`
 }
 
 type RtcpParameters struct {
-	CNAME       *string
-	ReducedSize *bool
+	CNAME       *string `json:"cname"`
+	ReducedSize *bool   `json:"reduceSize"`
 }

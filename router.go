@@ -321,7 +321,7 @@ func (r *routerImpl) CreateWebRtcTransport(
 		r.transports.Delete(id)
 	})
 	p.On("@newproducer", func(arg WebRtcTransportEvents) {
-		r.producers.Set(arg.Newdataproducer.Arg1.ID(), arg.Newproducer.Arg1)
+		r.producers.Set(arg.Newproducer.Arg1.ID(), arg.Newproducer.Arg1)
 	})
 	p.On("@producerclose", func(arg WebRtcTransportEvents) {
 		r.producers.Delete(arg.Producerclose.Arg1.ID())

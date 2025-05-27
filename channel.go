@@ -144,7 +144,11 @@ func (c *Channel) Request(
 	select {
 	case <-notify:
 		c.removesent(id)
-		return s.response, nil
+		if s.response.Accepted {
+			return s.response, nil
+		} else {
+			return nil, errors.New(s.response.Reason)
+		}
 
 		// case <-time.After(time.Second * 10):
 		// 	return nil, errors.New("time out")

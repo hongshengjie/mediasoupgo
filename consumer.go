@@ -221,7 +221,7 @@ func (c *consumerImpl) SetPreferredLayers(layers ConsumerLayers) error {
 		return err
 	}
 	resp2 := resp.Body.Value.(*consumer.SetPreferredLayersResponseT)
-	var t2 = resp2.PreferredLayers.TemporalLayer
+	t2 := resp2.PreferredLayers.TemporalLayer
 	preferredLayers := &ConsumerLayers{
 		TemporalLayer: t2,
 		SpatialLayer:  resp2.PreferredLayers.SpatialLayer,
@@ -306,8 +306,8 @@ func (p *consumerImpl) handleWorkerNotifications() {
 		case Notification.EventCONSUMER_SCORE:
 			value := arg.Body.Value.(*consumer.ConsumerScoreT)
 			s := &ConsumerScore{
-				Score:          int(value.Score),
-				ProducerScore:  int(value.ProducerScore),
+				Score:          value.Score,
+				ProducerScore:  value.ProducerScore,
 				ProducerScores: value.ProducerScores,
 			}
 			p.score = s
@@ -315,7 +315,7 @@ func (p *consumerImpl) handleWorkerNotifications() {
 			p.observer.Emit("score", ConsumerObserverEvents{Score: events.NewEvent1(*s)})
 		case Notification.EventCONSUMER_LAYERS_CHANGE:
 			value := arg.Body.Value.(*consumer.LayersChangeNotificationT)
-			var tl = value.Layers.TemporalLayer
+			tl := value.Layers.TemporalLayer
 			layer := &ConsumerLayers{
 				SpatialLayer:  value.Layers.SpatialLayer,
 				TemporalLayer: tl,
