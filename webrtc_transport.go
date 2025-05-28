@@ -202,7 +202,7 @@ func (w *webRtcTransportImpl) Connect(dtlsParameters DtlsParameters) (_ error) {
 	}
 	var role webrtctransport.DtlsRole
 	if dtlsParameters.Role != nil {
-		role = webrtctransport.EnumValuesDtlsRole[string(*dtlsParameters.Role)]
+		role = webrtctransport.EnumValuesDtlsRole[strings.ToUpper(string(*dtlsParameters.Role))]
 	}
 	req := &webrtctransport.ConnectRequestT{
 		DtlsParameters: &webrtctransport.DtlsParametersT{

@@ -338,10 +338,9 @@ func GetConsumableRtpParameters(
 	params RtpParameters,
 	caps RtpCapabilities,
 	rtpMapping RtpCodecsEncodingsMapping,
-) RtpParameters {
-	consumableParams := RtpParameters{
-		Encodings: []*RtpEncodingParameters{},
-		RTCP:      &RtcpParameters{},
+) *RtpParameters {
+	consumableParams := &RtpParameters{
+		RTCP: &RtcpParameters{},
 	}
 
 	for _, codec := range params.Codecs {
@@ -390,7 +389,7 @@ func GetConsumableRtpParameters(
 		)
 	}
 
-	consumableEncodings := cloneEncodings(params.Encodings)
+	consumableEncodings := slices.Clone(params.Encodings)
 	for i, encoding := range consumableEncodings {
 		encoding.SSRC = &rtpMapping.Encodings[i].MappedSsrc
 		encoding.RID = nil
@@ -441,7 +440,7 @@ func GetConsumerRtpParameters(
 	pipe bool,
 	enableRtx bool,
 ) (*RtpParameters, error) {
-	consumerParams := RtpParameters{
+	consumerParams := &RtpParameters{
 		RTCP: consumableRtpParameters.RTCP,
 	}
 
@@ -451,7 +450,7 @@ func GetConsumerRtpParameters(
 		}
 	}
 
-	consumableCodecs := cloneCodecs(consumableRtpParameters.Codecs)
+	consumableCodecs := slices.Clone(consumableRtpParameters.Codecs)
 	rtxSupported := false
 
 	for _, codec := range consumableCodecs {
@@ -460,7 +459,7 @@ func GetConsumerRtpParameters(
 		}
 		var matchedCapCodec *RtpCodecCapability
 		for _, capcodec := range remoteRtpCapabilities.Codecs {
-			if MatchCodecs(capcodec, codec, true, true) {
+			if MatchCodecs(capcodec, codec, true, false) {
 				matchedCapCodec = capcodec
 			}
 		}
@@ -479,7 +478,7 @@ func GetConsumerRtpParameters(
 			if findAssociatedMediaCodec(consumerParams.Codecs, apt) != nil {
 				rtxSupported = true
 			} else {
-				consumerParams.Codecs = append(consumerParams.Codecs[:i], consumerParams.Codecs[i+1:]...)
+				consumerParams.Codecs = slices.Delete(consumerParams.Codecs, i, i+1)
 			}
 		}
 	}
@@ -511,7 +510,7 @@ func GetConsumerRtpParameters(
 	}
 
 	if !pipe {
-		consumerEncoding := RtpEncodingParameters{}
+		consumerEncoding := &RtpEncodingParameters{}
 		consumerEncoding.SSRC = ptr.To(generateRandomNumber())
 		if rtxSupported {
 			rtxSsrc := *consumerEncoding.SSRC + 1
@@ -544,17 +543,15 @@ func GetConsumerRtpParameters(
 			consumerEncoding.MaxBitrate = &maxBitrate
 		}
 
-		consumerParams.Encodings = append(consumerParams.Encodings, &consumerEncoding)
+		consumerParams.Encodings = append(consumerParams.Encodings, consumerEncoding)
 	} else {
-		consumableEncodings := cloneEncodings(consumableRtpParameters.Encodings)
+		consumableEncodings := slices.Clone(consumableRtpParameters.Encodings)
 		baseSsrc := generateRandomNumber()
 		baseRtxSsrc := generateRandomNumber()
 		for i := range consumableEncodings {
-			consumableEncodings[i].SSRC = nil
 			consumableEncodings[i].SSRC = ptr.To(baseSsrc + uint32(i))
 			if enableRtx {
-				rtxSsrc := baseRtxSsrc + uint32(i)
-				consumableEncodings[i].RTX = &RTX{SSRC: rtxSsrc}
+				consumableEncodings[i].RTX = &RTX{SSRC: baseRtxSsrc + uint32(i)}
 			} else {
 				consumableEncodings[i].RTX = nil
 			}
@@ -562,7 +559,7 @@ func GetConsumerRtpParameters(
 		}
 	}
 
-	return &consumerParams, nil
+	return consumerParams, nil
 }
 
 // GetPipeConsumerRtpParameters generates RTP parameters for a pipe Consumer
@@ -577,7 +574,7 @@ func GetPipeConsumerRtpParameters(
 		RTCP:             consumableRtpParameters.RTCP,
 	}
 
-	consumableCodecs := cloneCodecs(consumableRtpParameters.Codecs)
+	consumableCodecs := slices.Clone(consumableRtpParameters.Codecs)
 	for _, codec := range consumableCodecs {
 		if !enableRtx && IsRtxCodec(codec) {
 			continue
@@ -590,7 +587,7 @@ func GetPipeConsumerRtpParameters(
 		consumableRtpParameters.HeaderExtensions,
 	)
 
-	consumableEncodings := cloneEncodings(consumableRtpParameters.Encodings)
+	consumableEncodings := slices.Clone(consumableRtpParameters.Encodings)
 	baseSsrc := generateRandomNumber()
 	baseRtxSsrc := generateRandomNumber()
 	for i := range consumableEncodings {
@@ -1024,14 +1021,6 @@ func cloneRtpCodecCapability(codec RtpCodecCapability) RtpCodecCapability {
 	return codec // Implement deep clone
 }
 
-func cloneEncodings(encodings []*RtpEncodingParameters) []*RtpEncodingParameters {
-	return append([]*RtpEncodingParameters{}, encodings...)
-}
-
-func cloneCodecs(codecs []*RtpCodecParameters) []*RtpCodecParameters {
-	return append([]*RtpCodecParameters{}, codecs...)
-}
-
 func findMatchingCodec(
 	codecs []*RtpCodecCapability,
 	mediaCodec *RtpCodecCapability,
@@ -1115,7 +1104,7 @@ func filterHeaderExtensions(
 	result := []*RtpHeaderExtensionParameters{}
 	for _, ext := range exts {
 		for _, capExt := range capExts {
-			if ext.ID != 0 && capExt.PreferredID != 0 && ext.ID == capExt.PreferredID &&
+			if ext.ID == capExt.PreferredID &&
 				ext.URI == capExt.URI {
 				result = append(result, ext)
 				break
@@ -1127,7 +1116,7 @@ func filterHeaderExtensions(
 
 func hasTransportCC(exts []*RtpHeaderExtensionParameters) bool {
 	for _, ext := range exts {
-		if ext.URI == "http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01" {
+		if ext.URI == TransportWideCC01RtpHeaderExtensionUri {
 			return true
 		}
 	}
@@ -1136,7 +1125,7 @@ func hasTransportCC(exts []*RtpHeaderExtensionParameters) bool {
 
 func hasAbsSendTime(exts []*RtpHeaderExtensionParameters) bool {
 	for _, ext := range exts {
-		if ext.URI == "http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time" {
+		if ext.URI == AbsSendTimeRtpHeaderExtensionUri {
 			return true
 		}
 	}
@@ -1146,13 +1135,8 @@ func hasAbsSendTime(exts []*RtpHeaderExtensionParameters) bool {
 func filterFeedback(fb []*RtcpFeedback, types ...string) []*RtcpFeedback {
 	result := []*RtcpFeedback{}
 	for _, f := range fb {
-		exclude := false
-		for _, t := range types {
-			if f.Type == t {
-				exclude = true
-				break
-			}
-		}
+
+		exclude := slices.Contains(types, f.Type)
 		if !exclude {
 			result = append(result, f)
 		}

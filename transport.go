@@ -321,7 +321,7 @@ func (t *transportImpl) Produce(options *ProducerOptions) (_ Producer, _ error) 
 			kind:                    options.Kind,
 			typ:                     ProducerType(strings.ToLower(resp2.Type.String())),
 			rtpParameters:           rtpParameters,
-			consumableRtpParameters: consumableRtpParameters,
+			consumableRtpParameters: *consumableRtpParameters,
 		},
 		t.channel,
 		ProducerAppData(t.appData),
