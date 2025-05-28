@@ -1,8 +1,8 @@
 package mediasoupgo
 
-import "mediasoupgo/ptr"
+import "mediasoupgo/internal/ptr"
 
-var SupportedRtpCapabilities = RtpCapabilities{
+var supportedRtpCapabilities = RtpCapabilities{
 	Codecs: []*RtpCodecCapability{
 		{
 			Kind:      AudioMediaKind,

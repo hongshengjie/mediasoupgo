@@ -2,11 +2,11 @@ package mediasoupgo
 
 import (
 	"log/slog"
-	"mediasoupgo/FBS/Notification"
-	producer "mediasoupgo/FBS/Producer"
-	"mediasoupgo/FBS/Request"
-	transport "mediasoupgo/FBS/Transport"
-	"mediasoupgo/events"
+	"mediasoupgo/internal/FBS/Notification"
+	producer "mediasoupgo/internal/FBS/Producer"
+	"mediasoupgo/internal/FBS/Request"
+	transport "mediasoupgo/internal/FBS/Transport"
+	"mediasoupgo/internal/events"
 )
 
 var _ Producer = &producerImpl{}

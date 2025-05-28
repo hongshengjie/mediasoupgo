@@ -5,11 +5,11 @@ import (
 	"log/slog"
 	"strings"
 
-	consumer "mediasoupgo/FBS/Consumer"
-	"mediasoupgo/FBS/Notification"
-	"mediasoupgo/FBS/Request"
-	transport "mediasoupgo/FBS/Transport"
-	"mediasoupgo/events"
+	consumer "mediasoupgo/internal/FBS/Consumer"
+	"mediasoupgo/internal/FBS/Notification"
+	"mediasoupgo/internal/FBS/Request"
+	transport "mediasoupgo/internal/FBS/Transport"
+	"mediasoupgo/internal/events"
 )
 
 var _ Consumer = &consumerImpl{}

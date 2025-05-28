@@ -1,6 +1,6 @@
 package mediasoupgo
 
-import "mediasoupgo/events"
+import "mediasoupgo/internal/events"
 
 // AudioLevelObserver interface definition
 type AudioLevelObserver interface {

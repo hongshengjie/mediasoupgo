@@ -1,11 +1,11 @@
 package mediasoupgo
 
 import (
-	dataproducer "mediasoupgo/FBS/DataProducer"
-	"mediasoupgo/FBS/Notification"
-	"mediasoupgo/FBS/Request"
-	transport "mediasoupgo/FBS/Transport"
-	"mediasoupgo/events"
+	dataproducer "mediasoupgo/internal/FBS/DataProducer"
+	"mediasoupgo/internal/FBS/Notification"
+	"mediasoupgo/internal/FBS/Request"
+	transport "mediasoupgo/internal/FBS/Transport"
+	"mediasoupgo/internal/events"
 )
 
 var _ DataProducer = &dataProducerImpl{}

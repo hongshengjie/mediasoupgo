@@ -3,8 +3,8 @@ package mediasoupgo
 import (
 	"strings"
 
-	fbsRtpParameters "mediasoupgo/FBS/RtpParameters"
-	FbsWebRtcTransport "mediasoupgo/FBS/WebRtcTransport"
+	fbsRtpParameters "mediasoupgo/internal/FBS/RtpParameters"
+	FbsWebRtcTransport "mediasoupgo/internal/FBS/WebRtcTransport"
 )
 
 func ToFbsRtpParameters(a *RtpParameters) *fbsRtpParameters.RtpParametersT {

@@ -10,17 +10,17 @@ import (
 
 	"github.com/google/uuid"
 
-	consumer "mediasoupgo/FBS/Consumer"
-	dataconsumer "mediasoupgo/FBS/DataConsumer"
-	dataproducer "mediasoupgo/FBS/DataProducer"
-	"mediasoupgo/FBS/Request"
-	router "mediasoupgo/FBS/Router"
-	rtpparameters "mediasoupgo/FBS/RtpParameters"
-	sctpstreamparameters "mediasoupgo/FBS/SctpParameters"
-	transport "mediasoupgo/FBS/Transport"
-	"mediasoupgo/events"
-	"mediasoupgo/ptr"
-	"mediasoupgo/smap"
+	consumer "mediasoupgo/internal/FBS/Consumer"
+	dataconsumer "mediasoupgo/internal/FBS/DataConsumer"
+	dataproducer "mediasoupgo/internal/FBS/DataProducer"
+	"mediasoupgo/internal/FBS/Request"
+	router "mediasoupgo/internal/FBS/Router"
+	rtpparameters "mediasoupgo/internal/FBS/RtpParameters"
+	sctpstreamparameters "mediasoupgo/internal/FBS/SctpParameters"
+	transport "mediasoupgo/internal/FBS/Transport"
+	"mediasoupgo/internal/events"
+	"mediasoupgo/internal/ptr"
+	"mediasoupgo/internal/smap"
 )
 
 var _ Transport = &transportImpl{}

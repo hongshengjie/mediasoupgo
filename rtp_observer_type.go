@@ -1,6 +1,6 @@
 package mediasoupgo
 
-import "mediasoupgo/events"
+import "mediasoupgo/internal/events"
 
 // RtpObserverType represents the possible types of RTP observers
 type RtpObserverType string

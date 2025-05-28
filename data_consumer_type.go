@@ -1,7 +1,7 @@
 package mediasoupgo
 
 import (
-	"mediasoupgo/events"
+	"mediasoupgo/internal/events"
 )
 
 type DataConsumerOptions struct {

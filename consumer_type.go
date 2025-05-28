@@ -2,7 +2,7 @@ package mediasoupgo
 
 import (
 	"bytes"
-	"mediasoupgo/events"
+	"mediasoupgo/internal/events"
 )
 
 type ConsumerOptions struct {

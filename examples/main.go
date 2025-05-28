@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"mediasoupgo"
-	"mediasoupgo/ptr"
+	"mediasoupgo/internal/ptr"
 )
 
 func main() {

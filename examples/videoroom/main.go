@@ -13,8 +13,8 @@ import (
 	cmap "github.com/orcaman/concurrent-map/v2"
 
 	"mediasoupgo"
-	"mediasoupgo/ptr"
-	"mediasoupgo/smap"
+	"mediasoupgo/internal/ptr"
+	"mediasoupgo/internal/smap"
 )
 
 var (

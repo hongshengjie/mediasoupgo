@@ -1,13 +1,13 @@
 package mediasoupgo
 
 import (
-	"mediasoupgo/FBS/Notification"
-	plaintransport "mediasoupgo/FBS/PlainTransport"
+	"mediasoupgo/internal/FBS/Notification"
+	plaintransport "mediasoupgo/internal/FBS/PlainTransport"
 
-	"mediasoupgo/FBS/Request"
-	srtpparameters "mediasoupgo/FBS/SrtpParameters"
-	transport "mediasoupgo/FBS/Transport"
-	"mediasoupgo/events"
+	"mediasoupgo/internal/FBS/Request"
+	srtpparameters "mediasoupgo/internal/FBS/SrtpParameters"
+	transport "mediasoupgo/internal/FBS/Transport"
+	"mediasoupgo/internal/events"
 	"strings"
 )
 

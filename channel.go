@@ -14,12 +14,12 @@ import (
 
 	flatbuffers "github.com/google/flatbuffers/go"
 
-	"mediasoupgo/FBS/Log"
-	fbsMessage "mediasoupgo/FBS/Message"
-	"mediasoupgo/FBS/Notification"
-	"mediasoupgo/FBS/Request"
-	"mediasoupgo/FBS/Response"
-	"mediasoupgo/events"
+	"mediasoupgo/internal/FBS/Log"
+	fbsMessage "mediasoupgo/internal/FBS/Message"
+	"mediasoupgo/internal/FBS/Notification"
+	"mediasoupgo/internal/FBS/Request"
+	"mediasoupgo/internal/FBS/Response"
+	"mediasoupgo/internal/events"
 )
 
 const intWidth int = int(unsafe.Sizeof(0))

@@ -12,11 +12,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"mediasoupgo/FBS/Request"
-	transport "mediasoupgo/FBS/Transport"
-	worker "mediasoupgo/FBS/Worker"
-	"mediasoupgo/events"
-	"mediasoupgo/smap"
+	"mediasoupgo/internal/FBS/Request"
+	transport "mediasoupgo/internal/FBS/Transport"
+	worker "mediasoupgo/internal/FBS/Worker"
+	"mediasoupgo/internal/events"
+	"mediasoupgo/internal/smap"
 )
 
 var _ Worker = &workerImpl{}

@@ -1,11 +1,11 @@
 package mediasoupgo
 
 import (
-	dataconsumer "mediasoupgo/FBS/DataConsumer"
-	"mediasoupgo/FBS/Notification"
-	"mediasoupgo/FBS/Request"
-	transport "mediasoupgo/FBS/Transport"
-	"mediasoupgo/events"
+	dataconsumer "mediasoupgo/internal/FBS/DataConsumer"
+	"mediasoupgo/internal/FBS/Notification"
+	"mediasoupgo/internal/FBS/Request"
+	transport "mediasoupgo/internal/FBS/Transport"
+	"mediasoupgo/internal/events"
 )
 
 var _ DataConsumer = &dataConsumerImpl{}

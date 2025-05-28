@@ -4,12 +4,12 @@ import (
 	"log/slog"
 	"strings"
 
-	"mediasoupgo/FBS/Notification"
-	"mediasoupgo/FBS/Request"
-	transport "mediasoupgo/FBS/Transport"
-	webrtctransport "mediasoupgo/FBS/WebRtcTransport"
-	"mediasoupgo/events"
-	"mediasoupgo/ptr"
+	"mediasoupgo/internal/FBS/Notification"
+	"mediasoupgo/internal/FBS/Request"
+	transport "mediasoupgo/internal/FBS/Transport"
+	webrtctransport "mediasoupgo/internal/FBS/WebRtcTransport"
+	"mediasoupgo/internal/events"
+	"mediasoupgo/internal/ptr"
 )
 
 var _ WebRtcTransport = &webRtcTransportImpl{}

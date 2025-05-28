@@ -3,7 +3,7 @@ package mediasoupgo
 import (
 	"context"
 
-	"mediasoupgo/events"
+	"mediasoupgo/internal/events"
 )
 
 type RouterOptions struct {

@@ -1,11 +1,11 @@
 package mediasoupgo
 
 import (
-	"mediasoupgo/FBS/Request"
-	webrtcserver "mediasoupgo/FBS/WebRtcServer"
-	worker "mediasoupgo/FBS/Worker"
-	"mediasoupgo/events"
-	"mediasoupgo/smap"
+	"mediasoupgo/internal/FBS/Request"
+	webrtcserver "mediasoupgo/internal/FBS/WebRtcServer"
+	worker "mediasoupgo/internal/FBS/Worker"
+	"mediasoupgo/internal/events"
+	"mediasoupgo/internal/smap"
 	"sync/atomic"
 )
 

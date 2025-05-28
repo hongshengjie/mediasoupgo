@@ -1,8 +1,8 @@
 package mediasoupgo
 
 import (
-	webrtcserver "mediasoupgo/FBS/WebRtcServer"
-	"mediasoupgo/events"
+	webrtcserver "mediasoupgo/internal/FBS/WebRtcServer"
+	"mediasoupgo/internal/events"
 )
 
 type WebRtcServerOption struct {

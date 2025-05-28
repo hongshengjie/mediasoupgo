@@ -1,9 +1,9 @@
 package mediasoupgo
 
 import (
-	fbsactivespeakerobserver "mediasoupgo/FBS/ActiveSpeakerObserver"
-	"mediasoupgo/FBS/Notification"
-	"mediasoupgo/events"
+	fbsactivespeakerobserver "mediasoupgo/internal/FBS/ActiveSpeakerObserver"
+	"mediasoupgo/internal/FBS/Notification"
+	"mediasoupgo/internal/events"
 )
 
 var _ ActiveSpeakerObserver = &activeSpeakerObserverImpl{}

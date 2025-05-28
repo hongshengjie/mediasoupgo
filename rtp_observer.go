@@ -2,10 +2,10 @@ package mediasoupgo
 
 import (
 	"errors"
-	"mediasoupgo/FBS/Request"
-	router "mediasoupgo/FBS/Router"
-	rtpobserver "mediasoupgo/FBS/RtpObserver"
-	"mediasoupgo/events"
+	"mediasoupgo/internal/FBS/Request"
+	router "mediasoupgo/internal/FBS/Router"
+	rtpobserver "mediasoupgo/internal/FBS/RtpObserver"
+	"mediasoupgo/internal/events"
 	"sync/atomic"
 )
 

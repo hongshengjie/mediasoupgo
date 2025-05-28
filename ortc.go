@@ -9,9 +9,9 @@ import (
 	"slices"
 	"strings"
 
-	fbsRtpParameters "mediasoupgo/FBS/RtpParameters"
-	"mediasoupgo/h264"
-	"mediasoupgo/ptr"
+	fbsRtpParameters "mediasoupgo/internal/FBS/RtpParameters"
+	"mediasoupgo/internal/h264"
+	"mediasoupgo/internal/ptr"
 )
 
 type RtpCodecsEncodingsMapping struct {
@@ -153,26 +153,26 @@ func ValidateSctpStreamParameters(params *SctpStreamParameters) error {
 // GenerateRouterRtpCapabilities generates RTP capabilities for the Router
 func GenerateRouterRtpCapabilities(mediaCodecs []*RtpCodecCapability) (*RtpCapabilities, error) {
 	// Assuming supportedRtpCapabilities is defined globally or passed as parameter
-	if err := ValidateRtpCapabilities(&SupportedRtpCapabilities); err != nil {
+	if err := ValidateRtpCapabilities(&supportedRtpCapabilities); err != nil {
 		return nil, err
 	}
 
-	clonedSupportedRtpCapabilities := cloneRtpCapabilities(SupportedRtpCapabilities)
+	clonedsupportedRtpCapabilities := cloneRtpCapabilities(supportedRtpCapabilities)
 
 	dynamicPayloadTypes := []byte{}
 	DeepCopyGob(&dynamicPayloadTypes, &DynamicPayloadTypes)
 	caps := RtpCapabilities{
 		Codecs:           []*RtpCodecCapability{},
-		HeaderExtensions: clonedSupportedRtpCapabilities.HeaderExtensions,
+		HeaderExtensions: clonedsupportedRtpCapabilities.HeaderExtensions,
 	}
 
 	for _, mediaCodec := range mediaCodecs {
 		if err := ValidateRtpCodecCapability(mediaCodec); err != nil {
 			return nil, err
 		}
-		// fmt.Println("support", *clonedSupportedRtpCapabilities.Codecs[0])
+		// fmt.Println("support", *clonedsupportedRtpCapabilities.Codecs[0])
 		matchedSupportedCodec := findMatchingCodec(
-			clonedSupportedRtpCapabilities.Codecs,
+			clonedsupportedRtpCapabilities.Codecs,
 			mediaCodec,
 		)
 		if matchedSupportedCodec == nil {

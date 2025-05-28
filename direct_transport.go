@@ -2,11 +2,11 @@ package mediasoupgo
 
 import (
 	"log/slog"
-	directtransport "mediasoupgo/FBS/DirectTransport"
-	"mediasoupgo/FBS/Notification"
-	"mediasoupgo/FBS/Request"
-	transport "mediasoupgo/FBS/Transport"
-	"mediasoupgo/events"
+	directtransport "mediasoupgo/internal/FBS/DirectTransport"
+	"mediasoupgo/internal/FBS/Notification"
+	"mediasoupgo/internal/FBS/Request"
+	transport "mediasoupgo/internal/FBS/Transport"
+	"mediasoupgo/internal/events"
 	"strings"
 )
 

@@ -1,9 +1,9 @@
 package mediasoupgo
 
 import (
-	fbsaudiolevelobserver "mediasoupgo/FBS/AudioLevelObserver"
-	"mediasoupgo/FBS/Notification"
-	"mediasoupgo/events"
+	fbsaudiolevelobserver "mediasoupgo/internal/FBS/AudioLevelObserver"
+	"mediasoupgo/internal/FBS/Notification"
+	"mediasoupgo/internal/events"
 )
 
 var _ AudioLevelObserver = &audioLevelObserverImpl{}
