@@ -5,7 +5,7 @@ import (
 )
 
 type DirectTransportOptions struct {
-	MaxMessageSize int
+	MaxMessageSize uint32
 	AppData        AppData
 }
 

@@ -5,8 +5,8 @@ type SctpCapabilities struct {
 }
 
 type NumSctpStreams struct {
-	OS  int
-	MIS int
+	OS  uint16
+	MIS uint16
 }
 
 type SctpParameters struct {

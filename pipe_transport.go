@@ -36,19 +36,27 @@ func NewPipeTransport(
 	getProducerById func(string) Producer,
 	getDataProducerById func(string) DataProducer,
 ) PipeTransport {
+
+	observer := events.New[PipeTransportObserverEvents]()
+	eventEmmiter := events.New[PipeTransportEvents]()
+
+	fn1 := func(en events.EventName, te TransportEvents) {
+		eventEmmiter.Emit(en, PipeTransportEvents{TransportEvents: te})
+	}
+	fn2 := func(en events.EventName, toe TransportObserverEvents) {
+		observer.Emit(en, PipeTransportObserverEvents{TransportObserverEvents: toe})
+	}
 	p := &pipeTransportImpl{
 		data:         options,
-		observer:     events.New[PipeTransportObserverEvents](),
-		EventEmmiter: events.New[PipeTransportEvents](),
+		observer:     observer,
+		EventEmmiter: eventEmmiter,
 	}
 
 	ti := NewTransport(id, channel, appData,
 		getRouterRtpCapabilities, getProducerById, getDataProducerById,
-		func(en events.EventName, te TransportEvents) {
-			p.EmitEvent(en, te)
-		}, func(en events.EventName, toe TransportObserverEvents) {
-			p.observer.Emit(en, PipeTransportObserverEvents{TransportObserverEvents: toe})
-		}, "pipe")
+		fn1,
+		fn2,
+		"pipe")
 	p.transportImpl = ti
 	p.handleWorkerNotifications()
 	p.handleListenerError()

@@ -7,8 +7,6 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/google/uuid"
-
 	fbsactivespeakerobserver "mediasoupgo/FBS/ActiveSpeakerObserver"
 	fbsaudiolevelobserver "mediasoupgo/FBS/AudioLevelObserver"
 	fbsdirecttransport "mediasoupgo/FBS/DirectTransport"
@@ -17,12 +15,15 @@ import (
 	"mediasoupgo/FBS/Request"
 	router "mediasoupgo/FBS/Router"
 	sctpparameters "mediasoupgo/FBS/SctpParameters"
+	fbssrtpparameters "mediasoupgo/FBS/SrtpParameters"
 	transport "mediasoupgo/FBS/Transport"
 	webrtctransport "mediasoupgo/FBS/WebRtcTransport"
 	worker "mediasoupgo/FBS/Worker"
 	"mediasoupgo/events"
 	"mediasoupgo/ptr"
 	"mediasoupgo/smap"
+
+	"github.com/google/uuid"
 )
 
 var _ Router = &routerImpl{}
@@ -246,33 +247,7 @@ func (r *routerImpl) CreateWebRtcTransport(
 		list := options.WebRtcTransportListen
 		linstens := &webrtctransport.ListenIndividualT{}
 		for _, v := range list.ListenInfos {
-			info := &transport.ListenInfoT{
-				Protocol:  transport.EnumValuesProtocol[strings.ToUpper(string(v.Protocol))],
-				Ip:        v.IP,
-				PortRange: &transport.PortRangeT{},
-				Flags:     &transport.SocketFlagsT{},
-			}
-			if v.AnnouncedAddress != nil {
-				info.AnnouncedAddress = *v.AnnouncedAddress
-			}
-			if v.Port != nil {
-				info.Port = *v.Port
-			}
-			if v.SendBufferSize != nil {
-				info.SendBufferSize = *v.SendBufferSize
-			}
-			if v.RecvBufferSize != nil {
-				info.RecvBufferSize = *v.RecvBufferSize
-			}
-			if v.PortRange != nil {
-				info.PortRange = &transport.PortRangeT{Max: v.PortRange.Max, Min: v.PortRange.Min}
-			}
-			if v.Flags != nil {
-				info.Flags = &transport.SocketFlagsT{
-					Ipv6Only:     v.Flags.IPV6Only,
-					UdpReusePort: v.Flags.UDPReusePort,
-				}
-			}
+			info := ToFbsListenInfo(&v)
 			linstens.ListenInfos = append(linstens.ListenInfos, info)
 		}
 		req.Options.Listen = &webrtctransport.ListenT{
@@ -408,46 +383,121 @@ func ToWebRtcTransportData(resp2 *webrtctransport.DumpResponseT) *WebRtcTranspor
 	return data
 }
 
+func ToFbsListenInfo(listenInfo *TransportListenInfo) *transport.ListenInfoT {
+
+	listeninfoT := &transport.ListenInfoT{
+		Protocol:  transport.EnumValuesProtocol[strings.ToUpper(string(listenInfo.Protocol))],
+		Ip:        listenInfo.IP,
+		PortRange: &transport.PortRangeT{},
+		Flags:     &transport.SocketFlagsT{},
+	}
+	if listenInfo.AnnouncedAddress != nil {
+		listeninfoT.AnnouncedAddress = *listenInfo.AnnouncedAddress
+	}
+	if listenInfo.Port != nil {
+		listeninfoT.Port = *listenInfo.Port
+	}
+	if listenInfo.PortRange != nil {
+		listeninfoT.PortRange = &transport.PortRangeT{
+			Min: listenInfo.PortRange.Min,
+			Max: listenInfo.PortRange.Max,
+		}
+	}
+	if listenInfo.Flags != nil {
+		listeninfoT.Flags = &transport.SocketFlagsT{
+			Ipv6Only:     listenInfo.Flags.IPV6Only,
+			UdpReusePort: listenInfo.Flags.UDPReusePort,
+		}
+	}
+	if listenInfo.SendBufferSize != nil {
+		listeninfoT.SendBufferSize = *listenInfo.SendBufferSize
+	}
+	if listenInfo.RecvBufferSize != nil {
+		listeninfoT.RecvBufferSize = *listenInfo.RecvBufferSize
+	}
+	return listeninfoT
+}
 func (r *routerImpl) CreatePlainTransport(options *PlainTransportOptions) (PlainTransport, error) {
-	// Implementation for creating PlainTransport
+	listenInfo := options.ListenInfo
+	listenIp := options.ListenIp
+
+	port := options.Port
+	if listenInfo != nil && listenIp == nil {
+		return nil, errors.New("")
+	}
+	if listenInfo == nil && listenIp == nil {
+		return nil, errors.New("")
+	}
+	if listenIp != nil {
+		listenInfo = &TransportListenInfo{
+			Protocol: "udp",
+			IP:       *listenIp,
+			Port:     port,
+		}
+	}
+	listeninfoT := ToFbsListenInfo(listenInfo)
+	var rtcpListenInfoT *transport.ListenInfoT
+	if options.RTCPListenInfo != nil {
+		rtcpListenInfoT = ToFbsListenInfo(options.RTCPListenInfo)
+	}
+	rtcpMux := true
+	if options.RTCPMux != nil {
+		rtcpMux = *options.RTCPMux
+	}
+	if rtcpMux == true {
+		rtcpListenInfoT = nil
+	}
+	comedia := false
+	if options.Comedia != nil {
+		comedia = *options.Comedia
+	}
+	srtpcryptosuite := AESCM128HMACSHA180SrtpCryptoSuite
+	if options.SRTPCryptoSuite != nil {
+		srtpcryptosuite = *options.SRTPCryptoSuite
+	}
+	enableSctp := false
+	if options.EnableSctp != nil {
+		enableSctp = *options.EnableSctp
+	}
+	enableSrtp := false
+	if options.EnableSrtp != nil {
+		enableSrtp = *options.EnableSrtp
+	}
+	numSctpStreams := &NumSctpStreams{
+		OS:  1024,
+		MIS: 1024,
+	}
+	if options.NumSctpStreams != nil {
+		numSctpStreams = options.NumSctpStreams
+	}
+	maxSctpMessageSize := uint32(262144)
+	if options.MaxSctpMessageSize != nil {
+		maxSctpMessageSize = *options.MaxSctpMessageSize
+	}
+	sctpSendBufferSize := uint32(262144)
+	if options.SctpSendBufferSize != nil {
+		sctpSendBufferSize = *options.SctpSendBufferSize
+	}
 	id := uuid.NewString()
 	req := &router.CreatePlainTransportRequestT{
-		TransportId: "",
+		TransportId: id,
 		Options: &fbsplaintransport.PlainTransportOptionsT{
 			Base: &transport.OptionsT{
-				Direct:                          false,
-				MaxMessageSize:                  new(uint32),
-				InitialAvailableOutgoingBitrate: new(uint32),
-				EnableSctp:                      false,
-				NumSctpStreams:                  &sctpparameters.NumSctpStreamsT{},
-				MaxSctpMessageSize:              0,
-				SctpSendBufferSize:              0,
-				IsDataChannel:                   false,
+				EnableSctp: enableSctp,
+				NumSctpStreams: &sctpparameters.NumSctpStreamsT{
+					Os:  numSctpStreams.OS,
+					Mis: numSctpStreams.MIS,
+				},
+				MaxSctpMessageSize: maxSctpMessageSize,
+				SctpSendBufferSize: sctpSendBufferSize,
+				IsDataChannel:      false,
 			},
-			ListenInfo: &transport.ListenInfoT{
-				Protocol:         0,
-				Ip:               "",
-				AnnouncedAddress: "",
-				Port:             0,
-				PortRange:        &transport.PortRangeT{},
-				Flags:            &transport.SocketFlagsT{},
-				SendBufferSize:   0,
-				RecvBufferSize:   0,
-			},
-			RtcpListenInfo: &transport.ListenInfoT{
-				Protocol:         0,
-				Ip:               "",
-				AnnouncedAddress: "",
-				Port:             0,
-				PortRange:        &transport.PortRangeT{},
-				Flags:            &transport.SocketFlagsT{},
-				SendBufferSize:   0,
-				RecvBufferSize:   0,
-			},
-			RtcpMux:         false,
-			Comedia:         false,
-			EnableSrtp:      false,
-			SrtpCryptoSuite: nil,
+			ListenInfo:      listeninfoT,
+			RtcpListenInfo:  rtcpListenInfoT,
+			RtcpMux:         rtcpMux,
+			Comedia:         comedia,
+			EnableSrtp:      enableSrtp,
+			SrtpCryptoSuite: ptr.To(fbssrtpparameters.EnumValuesSrtpCryptoSuite[string(srtpcryptosuite)]),
 		},
 	}
 	resp, err := r.channel.Request(
@@ -459,15 +509,53 @@ func (r *routerImpl) CreatePlainTransport(options *PlainTransportOptions) (Plain
 		return nil, err
 	}
 	resp2 := resp.Body.Value.(*fbsplaintransport.DumpResponseT)
+	var tuple *TransportTuple
+	if resp2.Tuple != nil {
+		tuple = &TransportTuple{
+			LocalIP:      resp2.Tuple.LocalAddress,
+			LocalAddress: resp2.Tuple.LocalAddress,
+			LocalPort:    resp2.Tuple.LocalPort,
+			RemoteIP:     &resp2.Tuple.RemoteIp,
+			RemotePort:   &resp2.Tuple.RemotePort,
+			Protocol: TransportProtocol(
+				strings.ToLower(resp2.Tuple.Protocol.String()),
+			),
+		}
+	}
+	var rtcpTuple *TransportTuple
 
+	if resp2.RtcpTuple != nil {
+		rtcpTuple = &TransportTuple{
+			LocalIP:      resp2.Tuple.LocalAddress,
+			LocalAddress: resp2.Tuple.LocalAddress,
+			LocalPort:    resp2.Tuple.LocalPort,
+			RemoteIP:     &resp2.Tuple.RemoteIp,
+			RemotePort:   &resp2.Tuple.RemotePort,
+			Protocol: TransportProtocol(
+				strings.ToLower(resp2.Tuple.Protocol.String()),
+			),
+		}
+	}
+	var sctpParameters *SctpParameters
+	if resp2.Base != nil {
+		sctpParameters = &SctpParameters{
+			Port:           resp2.Base.SctpParameters.Port,
+			OS:             resp2.Base.SctpParameters.Os,
+			MIS:            resp2.Base.SctpParameters.Mis,
+			MaxMessageSize: resp2.Base.MaxMessageSize,
+		}
+	}
 	p := NewPlainTransport(&PlainTransportData{
 		rtcpMux:        resp2.RtcpMux,
-		comedia:        false,
-		tuple:          TransportTuple{},
-		rtcpTuple:      &TransportTuple{},
-		sctpParameters: &SctpParameters{},
-		sctpState:      "",
-		srtpParameters: &SrtpParameters{},
+		comedia:        resp2.Comedia,
+		tuple:          *tuple,
+		rtcpTuple:      rtcpTuple,
+		sctpParameters: sctpParameters,
+		srtpParameters: &SrtpParameters{
+			CryptoSuite: SrtpCryptoSuite(resp2.SrtpParameters.CryptoSuite.String()),
+			KeyBase64:   resp2.SrtpParameters.KeyBase64,
+		},
+		sctpState: SctpState(strings.ToLower(resp2.Base.SctpState.String())),
 	}, TransportInternal{RouterInternal: r.RouterInternal, transportId: id}, r.channel, TransportAppData(r.appData),
 		func() RtpCapabilities {
 			return *r.rtpCapabilities
@@ -506,14 +594,72 @@ func (r *routerImpl) CreatePlainTransport(options *PlainTransportOptions) (Plain
 }
 
 func (r *routerImpl) CreatePipeTransport(options *PipeTransportOptions) (PipeTransport, error) {
-	id := uuid.NewString()
+	listenInfo := options.ListenInfo
+	listenIp := options.ListenIp
+
+	port := options.Port
+	if listenInfo != nil && listenIp == nil {
+		return nil, errors.New("")
+	}
+	if listenInfo == nil && listenIp == nil {
+		return nil, errors.New("")
+	}
+	if listenIp != nil {
+		listenInfo = &TransportListenInfo{
+			Protocol: "udp",
+			IP:       *listenIp,
+			Port:     port,
+		}
+	}
+
+	listeninfoT := ToFbsListenInfo(listenInfo)
+	enableSctp := false
+	if options.EnableSctp != nil {
+		enableSctp = *options.EnableSctp
+	}
+	enableRtx := false
+	if options.EnableRtx != nil {
+		enableRtx = *options.EnableRtx
+	}
+	enableSrtp := false
+	if options.EnableSrtp != nil {
+		enableSrtp = *options.EnableSrtp
+	}
+	numSctpStreams := &NumSctpStreams{
+		OS:  1024,
+		MIS: 1024,
+	}
+	if options.NumSctpStreams != nil {
+		numSctpStreams = options.NumSctpStreams
+	}
+	maxSctpMessageSize := uint32(268435456)
+	if options.MaxSctpMessageSize != nil {
+		maxSctpMessageSize = *options.MaxSctpMessageSize
+	}
+	sctpSendBufferSize := uint32(268435456)
+	if options.SctpSendBufferSize != nil {
+		sctpSendBufferSize = *options.SctpSendBufferSize
+	}
+	transportId := uuid.NewString()
 	req := &router.CreatePipeTransportRequestT{
-		TransportId: "",
+		TransportId: transportId,
 		Options: &fbspipetransport.PipeTransportOptionsT{
-			Base:       &transport.OptionsT{},
-			ListenInfo: &transport.ListenInfoT{},
-			EnableRtx:  false,
-			EnableSrtp: false,
+			Base: &transport.OptionsT{
+				Direct:                          false,
+				MaxMessageSize:                  nil,
+				InitialAvailableOutgoingBitrate: nil,
+				EnableSctp:                      enableSctp,
+				NumSctpStreams: &sctpparameters.NumSctpStreamsT{
+					Os:  uint16(numSctpStreams.OS),
+					Mis: uint16(numSctpStreams.MIS),
+				},
+				MaxSctpMessageSize: uint32(maxSctpMessageSize),
+				SctpSendBufferSize: uint32(sctpSendBufferSize),
+				IsDataChannel:      false,
+			},
+			ListenInfo: listeninfoT,
+			EnableRtx:  enableRtx,
+			EnableSrtp: enableSrtp,
 		},
 	}
 	resp, err := r.channel.Request(
@@ -525,13 +671,9 @@ func (r *routerImpl) CreatePipeTransport(options *PipeTransportOptions) (PipeTra
 		return nil, err
 	}
 	resp2 := resp.Body.Value.(*fbspipetransport.DumpResponseT)
-	p := NewPipeTransport(&PipeTransportData{
-		tuple:          TransportTuple{},
-		sctpParameters: &SctpParameters{},
-		sctpState:      "",
-		rtx:            resp2.Rtx,
-		srtpParameters: &SrtpParameters{},
-	}, TransportInternal{RouterInternal: r.RouterInternal, transportId: id}, r.channel, TransportAppData(r.appData),
+	p := NewPipeTransport(
+		ToPipeTransportData(resp2),
+		TransportInternal{RouterInternal: r.RouterInternal, transportId: transportId}, r.channel, TransportAppData(r.appData),
 		func() RtpCapabilities {
 			return *r.rtpCapabilities
 		}, func(s string) Producer {
@@ -543,12 +685,12 @@ func (r *routerImpl) CreatePipeTransport(options *PipeTransportOptions) (PipeTra
 		},
 	)
 
-	r.transports.Set(id, p)
+	r.transports.Set(transportId, p)
 	p.On("@close", func(arg PipeTransportEvents) {
-		r.transports.Delete(id)
+		r.transports.Delete(transportId)
 	})
 	p.On("@listenserverclose", func(arg PipeTransportEvents) {
-		r.transports.Delete(id)
+		r.transports.Delete(transportId)
 	})
 	p.On("@newproducer", func(arg PipeTransportEvents) {
 		r.producers.Set(arg.Newdataproducer.Arg1.ID(), arg.Newproducer.Arg1)
@@ -568,23 +710,52 @@ func (r *routerImpl) CreatePipeTransport(options *PipeTransportOptions) (PipeTra
 	)
 	return p, nil
 }
+func ToPipeTransportData(resp2 *fbspipetransport.DumpResponseT) *PipeTransportData {
+	data := &PipeTransportData{
+		sctpState: SctpState(strings.ToLower(resp2.Base.SctpState.String())),
+		rtx:       resp2.Rtx,
+		srtpParameters: &SrtpParameters{
+			CryptoSuite: SrtpCryptoSuite(resp2.SrtpParameters.CryptoSuite.String()),
+			KeyBase64:   resp2.SrtpParameters.KeyBase64,
+		},
+	}
 
+	if resp2.Tuple != nil {
+		data.tuple = TransportTuple{
+			LocalIP:      resp2.Tuple.LocalAddress,
+			LocalAddress: resp2.Tuple.LocalAddress,
+			LocalPort:    resp2.Tuple.LocalPort,
+			RemoteIP:     &resp2.Tuple.RemoteIp,
+			RemotePort:   &resp2.Tuple.RemotePort,
+			Protocol: TransportProtocol(
+				strings.ToLower(resp2.Tuple.Protocol.String()),
+			),
+		}
+	}
+	if resp2.Base != nil {
+		data.sctpParameters = &SctpParameters{
+			Port:           resp2.Base.SctpParameters.Port,
+			OS:             resp2.Base.SctpParameters.Os,
+			MIS:            resp2.Base.SctpParameters.Mis,
+			MaxMessageSize: resp2.Base.MaxMessageSize,
+		}
+	}
+	return data
+}
 func (r *routerImpl) CreateDirectTransport(
 	options *DirectTransportOptions,
 ) (DirectTransport, error) {
 	id := uuid.NewString()
+	maxMessageSize := uint32(262144)
+	if options.MaxMessageSize != 0 {
+		maxMessageSize = options.MaxMessageSize
+	}
 	req := &router.CreateDirectTransportRequestT{
 		TransportId: id,
 		Options: &fbsdirecttransport.DirectTransportOptionsT{
 			Base: &transport.OptionsT{
-				Direct:                          false,
-				MaxMessageSize:                  new(uint32),
-				InitialAvailableOutgoingBitrate: new(uint32),
-				EnableSctp:                      false,
-				NumSctpStreams:                  &sctpparameters.NumSctpStreamsT{},
-				MaxSctpMessageSize:              0,
-				SctpSendBufferSize:              0,
-				IsDataChannel:                   false,
+				Direct:         true,
+				MaxMessageSize: &maxMessageSize,
 			},
 		},
 	}
@@ -597,9 +768,13 @@ func (r *routerImpl) CreateDirectTransport(
 		return nil, err
 	}
 	resp2 := resp.Body.Value.(*fbsdirecttransport.DumpResponseT)
-	fmt.Println(resp2)
 	p := NewDirectTransport(&DirectTransportData{
-		sctpParameters: &SctpParameters{},
+		sctpParameters: &SctpParameters{
+			Port:           resp2.Base.SctpParameters.Port,
+			OS:             resp2.Base.SctpParameters.Os,
+			MIS:            resp2.Base.SctpParameters.Mis,
+			MaxMessageSize: resp2.Base.SctpParameters.MaxMessageSize,
+		},
 	}, TransportInternal{RouterInternal: r.RouterInternal, transportId: id}, r.channel, TransportAppData(r.appData),
 		func() RtpCapabilities {
 			return *r.rtpCapabilities
@@ -737,4 +912,5 @@ func (r *routerImpl) handListenError() {
 	r.On("listenererror", func(arg RouterEvents) {
 		// TODO
 	})
+
 }

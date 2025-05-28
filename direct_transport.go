@@ -33,18 +33,23 @@ func NewDirectTransport(
 	getDataProducerById func(string) DataProducer,
 ) DirectTransport {
 
+	observer := events.New[DirectTransportObserverEvents]()
+	eventEmmiter := events.New[DirectTransportEvents]()
+
+	fn1 := func(en events.EventName, te TransportEvents) {
+		eventEmmiter.Emit(en, DirectTransportEvents{TransportEvents: te})
+	}
+	fn2 := func(en events.EventName, toe TransportObserverEvents) {
+		observer.Emit(en, DirectTransportObserverEvents{TransportObserverEvents: toe})
+	}
 	d := &directTransportImpl{
 		data:         options,
-		observer:     events.New[DirectTransportObserverEvents](),
-		EventEmmiter: events.New[DirectTransportEvents](),
+		observer:     observer,
+		EventEmmiter: eventEmmiter,
 	}
 	ti := NewTransport(id, channel, appData,
 		getRouterRtpCapabilities, getProducerById, getDataProducerById,
-		func(en events.EventName, te TransportEvents) {
-			d.EmitEvent(en, te)
-		}, func(en events.EventName, toe TransportObserverEvents) {
-			d.observer.Emit(en, DirectTransportObserverEvents{TransportObserverEvents: toe})
-		}, "direct")
+		fn1, fn2, "direct")
 	d.transportImpl = ti
 	d.handleWorkerNotifications()
 	d.handleListenerError()

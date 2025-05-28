@@ -304,11 +304,11 @@ func (p *consumerImpl) handleWorkerNotifications() {
 				p.observer.Emit("resume", ConsumerObserverEvents{Resume: struct{}{}})
 			}
 		case Notification.EventCONSUMER_SCORE:
-			value := arg.Body.Value.(*consumer.ConsumerScoreT)
+			value := arg.Body.Value.(*consumer.ScoreNotificationT)
 			s := &ConsumerScore{
-				Score:          value.Score,
-				ProducerScore:  value.ProducerScore,
-				ProducerScores: value.ProducerScores,
+				Score:          value.Score.Score,
+				ProducerScore:  value.Score.ProducerScore,
+				ProducerScores: value.Score.ProducerScores,
 			}
 			p.score = s
 			p.Emit("score", ConsumerEvents{Score: events.NewEvent1(*s)})

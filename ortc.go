@@ -158,7 +158,9 @@ func GenerateRouterRtpCapabilities(mediaCodecs []*RtpCodecCapability) (*RtpCapab
 	}
 
 	clonedSupportedRtpCapabilities := cloneRtpCapabilities(SupportedRtpCapabilities)
-	dynamicPayloadTypes := slices.Clone(DynamicPayloadTypes)
+
+	dynamicPayloadTypes := []byte{}
+	DeepCopyGob(&dynamicPayloadTypes, &DynamicPayloadTypes)
 	caps := RtpCapabilities{
 		Codecs:           []*RtpCodecCapability{},
 		HeaderExtensions: clonedSupportedRtpCapabilities.HeaderExtensions,
@@ -389,7 +391,8 @@ func GetConsumableRtpParameters(
 		)
 	}
 
-	consumableEncodings := slices.Clone(params.Encodings)
+	consumableEncodings := []*RtpEncodingParameters{}
+	DeepCopyGob(&consumableEncodings, &params.Encodings)
 	for i, encoding := range consumableEncodings {
 		encoding.SSRC = &rtpMapping.Encodings[i].MappedSsrc
 		encoding.RID = nil
@@ -450,7 +453,8 @@ func GetConsumerRtpParameters(
 		}
 	}
 
-	consumableCodecs := slices.Clone(consumableRtpParameters.Codecs)
+	consumableCodecs := []*RtpCodecParameters{}
+	DeepCopyGob(&consumableCodecs, &consumableRtpParameters.Codecs)
 	rtxSupported := false
 
 	for _, codec := range consumableCodecs {
@@ -545,7 +549,9 @@ func GetConsumerRtpParameters(
 
 		consumerParams.Encodings = append(consumerParams.Encodings, consumerEncoding)
 	} else {
-		consumableEncodings := slices.Clone(consumableRtpParameters.Encodings)
+
+		consumableEncodings := make([]*RtpEncodingParameters, 0, 0)
+		DeepCopyGob(&consumableEncodings, &consumableRtpParameters.Encodings)
 		baseSsrc := generateRandomNumber()
 		baseRtxSsrc := generateRandomNumber()
 		for i := range consumableEncodings {
@@ -574,7 +580,8 @@ func GetPipeConsumerRtpParameters(
 		RTCP:             consumableRtpParameters.RTCP,
 	}
 
-	consumableCodecs := slices.Clone(consumableRtpParameters.Codecs)
+	consumableCodecs := []*RtpCodecParameters{}
+	DeepCopyGob(&consumableCodecs, &consumableRtpParameters.Codecs)
 	for _, codec := range consumableCodecs {
 		if !enableRtx && IsRtxCodec(codec) {
 			continue
@@ -587,7 +594,8 @@ func GetPipeConsumerRtpParameters(
 		consumableRtpParameters.HeaderExtensions,
 	)
 
-	consumableEncodings := slices.Clone(consumableRtpParameters.Encodings)
+	consumableEncodings := []*RtpEncodingParameters{}
+	DeepCopyGob(&consumableCodecs, &consumableRtpParameters.Encodings)
 	baseSsrc := generateRandomNumber()
 	baseRtxSsrc := generateRandomNumber()
 	for i := range consumableEncodings {
@@ -1014,11 +1022,15 @@ func ValidateRtcpParameters(rtcp *RtcpParameters) error {
 
 // Helper functions (placeholders for actual implementations)
 func cloneRtpCapabilities(caps RtpCapabilities) RtpCapabilities {
-	return caps // Implement deep clone
+	var capsdst RtpCapabilities
+	DeepCopyGob(&capsdst, &caps)
+	return capsdst
 }
 
 func cloneRtpCodecCapability(codec RtpCodecCapability) RtpCodecCapability {
-	return codec // Implement deep clone
+	var codecdst RtpCodecCapability
+	DeepCopyGob(&codecdst, &codec)
+	return codecdst // Implement deep clone
 }
 
 func findMatchingCodec(

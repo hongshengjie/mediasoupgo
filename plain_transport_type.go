@@ -9,15 +9,15 @@ type PlainTransportOptions struct {
 	Comedia            *bool
 	EnableSctp         *bool
 	NumSctpStreams     *NumSctpStreams
-	MaxSctpMessageSize *int
-	SctpSendBufferSize *int
+	MaxSctpMessageSize *uint32
+	SctpSendBufferSize *uint32
 	EnableSrtp         *bool
 	SRTPCryptoSuite    *SrtpCryptoSuite
 	AppData            AppData
 	ListenInfo         *TransportListenInfo
 	RTCPListenInfo     *TransportListenInfo
-	ListenIp           *interface{}
-	Port               *int
+	ListenIp           *string
+	Port               *uint16
 }
 
 type PlainTransportDump struct {

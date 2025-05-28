@@ -12,9 +12,9 @@ type AudioLevelObserver interface {
 }
 
 type AudioLevelObserverOptions struct {
-	MaxEntries int
-	Threshold  int
-	Interval   int
+	MaxEntries uint16
+	Threshold  uint8
+	Interval   uint16
 	AppData    AudioLevelObserverAppData
 }
 

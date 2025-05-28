@@ -5,14 +5,14 @@ import "mediasoupgo/events"
 type PipeTransportOptions struct {
 	EnableSctp         *bool
 	NumSctpStreams     *NumSctpStreams
-	MaxSctpMessageSize *int
-	SctpSendBufferSize *int
+	MaxSctpMessageSize *uint32
+	SctpSendBufferSize *uint32
 	EnableRtx          *bool
 	EnableSrtp         *bool
 	AppData            AppData
 	ListenInfo         *TransportListenInfo
-	ListenIp           *interface{}
-	Port               *int
+	ListenIp           *string
+	Port               *uint16
 }
 
 type PipeConsumerOptions struct {

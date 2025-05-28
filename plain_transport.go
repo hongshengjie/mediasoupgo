@@ -38,19 +38,25 @@ func NewPlainTransport(
 	getProducerById func(string) Producer,
 	getDataProducerById func(string) DataProducer,
 ) PlainTransport {
+
+	observer := events.New[PlainTransportObserverEvents]()
+	eventEmmiter := events.New[PlainTransportEvents]()
+
+	fn1 := func(en events.EventName, te TransportEvents) {
+		eventEmmiter.Emit(en, PlainTransportEvents{TransportEvents: te})
+	}
+	fn2 := func(en events.EventName, toe TransportObserverEvents) {
+		observer.Emit(en, PlainTransportObserverEvents{TransportObserverEvents: toe})
+	}
 	p := &plainTransportImpl{
 		data:         options,
-		observer:     events.New[PlainTransportObserverEvents](),
-		EventEmmiter: events.New[PlainTransportEvents](),
+		observer:     observer,
+		EventEmmiter: eventEmmiter,
 	}
 
 	ti := NewTransport(id, channel, appData,
 		getRouterRtpCapabilities, getProducerById, getDataProducerById,
-		func(en events.EventName, te TransportEvents) {
-			p.EmitEvent(en, te)
-		}, func(en events.EventName, toe TransportObserverEvents) {
-			p.observer.Emit(en, PlainTransportObserverEvents{TransportObserverEvents: toe})
-		}, "plain")
+		fn1, fn2, "plain")
 	p.transportImpl = ti
 	p.handleWorkerNotifications()
 	p.handleListenerError()
